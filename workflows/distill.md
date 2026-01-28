@@ -14,7 +14,11 @@
    - 只处理“未来会复用/会影响决策/会反复出现”的内容
    - 其余保留在 `capture/`，不要强行沉淀
 2. **定类**
-   - 选择落点：`concepts/ models/ methods/ projects/ decisions/ philosophy/ skills`
+   - 先选择认知层：`assets/evidence/` 或 `assets/patterns/` 或 `assets/principles/`
+   - 再按需选择/创建层内子目录（仅为降低摩擦，不是强约束），例如：
+     - `evidence/projects/`、`evidence/decisions/`
+     - `patterns/methods/`、`patterns/models/`、`patterns/skills/`
+     - `principles/concepts/`、`principles/philosophy/`
 3. **写资产（最小可用）**
    - 给出清晰标题与一段结论（定义/模型/步骤/决策）
    - 写清边界：适用/不适用、前提、风险（避免泛化）
@@ -31,7 +35,7 @@
 每个资产条目最少包含：
 
 - `id`：稳定标识（建议：`YYYYMMDDHHmm-短名`，不随文件重命名而变化）
-- `path`：资产文件相对路径（例如：`assets/methods/gtd.md`）
+- `path`：资产文件相对路径（例如：`assets/patterns/methods/gtd.md`）
 - `kind`：资产类型（`concept|model|method|project|decision|philosophy|skill`）
 - `title`：标题
 
@@ -43,4 +47,3 @@
 - `links`：关联资产 `id` 数组（后续可用于生成图谱）
 
 Schema 参考：`machine/schema/index.schema.json`（需要变更格式时先改 schema，再改数据）。
-
