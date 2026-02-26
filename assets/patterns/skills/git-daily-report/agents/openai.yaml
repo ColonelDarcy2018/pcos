@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git Daily Report"
+  short_description: "Analyze today's Git changes and draft daily reports"
+  default_prompt: "Use git to summarize today's changes and produce a daily report."
