@@ -1,4 +1,4 @@
 interface:
   display_name: "Git Daily Report"
-  short_description: "Analyze today's Git changes and draft daily reports"
-  default_prompt: "Use git to summarize today's changes, write the daily report, then commit and push."
+  short_description: "Strict git diff based daily report with auto sync"
+  default_prompt: "Strictly use git diff HEAD to generate today's report (今日完成/明日任务/工时), write back to capture/journals, then commit all docs and push."

@@ -33,6 +33,24 @@ PCOS 的定位是一个**认知进化系统**：结构的目的在于支持知�
 2. **蒸馏**：按 `workflows/distill.md` 将有价值内容沉淀到 `assets/`，同时更新 `machine/` 索引。
 3. **复用**：优先从 `assets/` 取用，而不是重复造轮子；重要决策写入 `assets/evidence/decisions/`。
 
+## 日报闭环（Git -> Capture -> 提交）
+
+为保证每天工作与想法都形成可追踪沉淀，PCOS 增加了项目化日报技能：
+
+- 技能位置：`assets/patterns/skills/git-daily-report/`
+- 核心约束：日报严格基于 `git diff HEAD`（不混入已提交历史）
+- 固定产物：`今日完成`、`明日任务`、`工时`
+- 回写位置：`capture/journals/YYYY_MM_DD.md` 的 `- 日报` 区块
+- 收尾动作：回写后提交全部文档并推送，形成当日演化快照
+
+推荐执行命令：
+
+```bash
+python3 assets/patterns/skills/git-daily-report/scripts/update_daily_report.py --repo . --sync
+```
+
+该闭环与 `workflows/distill.md` 互补：日报用于“当天收敛”，蒸馏用于“长期升维”。
+
 ## 演进原则（如何长期维护）
 
 - **先手工、后自动化**：流程稳定后再加脚本/Agent；自动化产物尽量可重建。
