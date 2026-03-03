@@ -16,6 +16,8 @@
 # Node
 /Users/zhuxiaowei/ccos/scripts/ccosctl node validate --repo-root /Users/zhuxiaowei/apps/rpa-mobile --ccos-root CCOS
 /Users/zhuxiaowei/ccos/scripts/ccosctl node sync --repo-root /Users/zhuxiaowei/apps/rpa-mobile --ccos-root CCOS
+/Users/zhuxiaowei/ccos/scripts/ccosctl node print-commit-template
+/Users/zhuxiaowei/ccos/scripts/ccosctl node install-commit-hook --repo-root /Users/zhuxiaowei/apps/rpa-mobile --mode strict
 
 # Taskline
 /Users/zhuxiaowei/ccos/scripts/ccosctl task start --task-id demo/task --title "demo" --project-id rpa-mobile --repo-root /Users/zhuxiaowei/apps/rpa-mobile --node-id outer
@@ -26,3 +28,4 @@
 1. `ccosctl node validate/sync` 自动兼容不同仓库 `ccos_p0.py` 的参数风格（含 `--root` 差异）。
 2. `ccosctl hub lint` 会校验 Node 协议是否锚定中枢协议文档 `ccos-unified-protocol.md`。
 3. 在项目目录执行 `ccosctl hub ...` 时，若未传 `--hub-root`，会自动回退到 `~/ccos`。
+4. `ccosctl node install-commit-hook` 会安装 `commit-msg` 钩子，约束提交正文包含 `taskline_id/next/hours`。

@@ -24,6 +24,11 @@ ANCHOR_DOC_NAME = "ccos-unified-protocol.md"
 TASK_INDEX_REL = "capture/tasklines/task-index.md"
 TASKLINES_REL = "capture/tasklines"
 TASK_REQUIRED_FIELDS = ("project_id", "repo_root", "ccos_node")
+COMMIT_META_TEMPLATE = """taskline_id: <project/taskline>
+work_summary: <本次工作摘要>
+next: <下一步动作>
+hours: <1.5h>"""
+COMMIT_HOOK_MARKER = "CCOS-COMMIT-META-HOOK"
 
 
 @dataclass
@@ -137,6 +142,85 @@ def run_subprocess(cmd: list[str], cwd: Path | None = None) -> int:
 
 def command_to_text(cmd: list[str]) -> str:
     return " ".join(cmd)
+
+
+def resolve_git_hooks_dir(repo_root: Path) -> Path | None:
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "rev-parse", "--git-path", "hooks"],
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        return None
+    output = proc.stdout.strip()
+    if not output:
+        return None
+    hooks = Path(output)
+    if not hooks.is_absolute():
+        hooks = (repo_root / hooks).resolve()
+    return hooks
+
+
+def build_commit_msg_hook(mode: str) -> str:
+    mode = mode.strip().lower()
+    if mode not in {"warn", "strict"}:
+        raise ValueError(f"invalid commit hook mode: {mode}")
+    escaped_template = COMMIT_META_TEMPLATE.replace("$", "\\$")
+    return f"""#!/usr/bin/env sh
+# {COMMIT_HOOK_MARKER}
+set -eu
+
+MODE="{mode}"
+MSG_FILE="${{1:-}}"
+
+if [ -z "$MSG_FILE" ] || [ ! -f "$MSG_FILE" ]; then
+  exit 0
+fi
+
+if [ "${{CCOS_COMMIT_META_BYPASS:-0}}" = "1" ]; then
+  exit 0
+fi
+
+subject="$(sed -n '1p' "$MSG_FILE" || true)"
+case "$subject" in
+  Merge\\ *|Revert\\ *)
+    exit 0
+    ;;
+esac
+
+missing=""
+append_missing() {{
+  if [ -z "$missing" ]; then
+    missing="$1"
+  else
+    missing="$missing, $1"
+  fi
+}}
+
+if ! grep -Eiq '^[[:space:]]*taskline_id[[:space:]]*[:：][[:space:]]*.+$' "$MSG_FILE"; then
+  append_missing "taskline_id"
+fi
+if ! grep -Eiq '^[[:space:]]*(next|todo|next_actions|明日任务|下一步)[[:space:]]*[:：][[:space:]]*.+$' "$MSG_FILE"; then
+  append_missing "next"
+fi
+if ! grep -Eiq '^[[:space:]]*(hours|工时)[[:space:]]*[:：][[:space:]]*.+$' "$MSG_FILE"; then
+  append_missing "hours"
+fi
+
+if [ -n "$missing" ]; then
+  echo "[ccos] commit meta missing: $missing" >&2
+  echo "[ccos] required fields: taskline_id / next / hours" >&2
+  echo "[ccos] template:" >&2
+  cat >&2 <<'CCOS_TEMPLATE'
+{escaped_template}
+CCOS_TEMPLATE
+  if [ "$MODE" = "strict" ]; then
+    exit 1
+  fi
+fi
+
+exit 0
+"""
 
 
 def strip_ticks(value: str) -> str:
@@ -844,6 +928,60 @@ def cmd_node_status(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_node_print_commit_template(_args: argparse.Namespace) -> int:
+    print(COMMIT_META_TEMPLATE)
+    return EXIT_OK
+
+
+def cmd_node_install_commit_hook(args: argparse.Namespace) -> int:
+    repo_root = resolve_path(Path.cwd(), args.repo_root)
+    if not repo_root.is_dir():
+        print(f"[error] repository root not found: {repo_root}")
+        return EXIT_ARG
+
+    hooks_dir = resolve_git_hooks_dir(repo_root)
+    if hooks_dir is None:
+        print(f"[error] cannot resolve git hooks directory: {repo_root}")
+        return EXIT_ARG
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+
+    hook_path = hooks_dir / "commit-msg"
+    existing_text = ""
+    existing_managed = False
+    if hook_path.exists():
+        try:
+            existing_text = read_text(hook_path)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[error] cannot read existing hook: {hook_path}: {exc}")
+            return EXIT_IO
+        existing_managed = COMMIT_HOOK_MARKER in existing_text
+        if not existing_managed and not args.force:
+            print(f"[error] hook already exists and is not managed by ccos: {hook_path}")
+            print("Use --force to back up and overwrite.")
+            return EXIT_STATE
+
+    if hook_path.exists() and not existing_managed:
+        backup = hook_path.with_name(
+            f"commit-msg.bak.{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        )
+        hook_path.rename(backup)
+        print(f"[backup] existing hook moved to {backup}")
+
+    try:
+        write_text(hook_path, build_commit_msg_hook(args.mode))
+        hook_path.chmod(0o755)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[error] failed to write hook: {hook_path}: {exc}")
+        return EXIT_IO
+
+    print(f"[ok] installed commit-msg hook: {hook_path} mode={args.mode}")
+    if args.mode == "warn":
+        print("[hint] warn mode will not block commit; switch to --mode strict to enforce.")
+    else:
+        print("[hint] set CCOS_COMMIT_META_BYPASS=1 to bypass once if needed.")
+    return EXIT_OK
+
+
 def cmd_task_start(args: argparse.Namespace) -> int:
     try:
         hub_root = resolve_hub_root(args.hub_root)
@@ -1083,6 +1221,30 @@ def build_parser() -> argparse.ArgumentParser:
     node_status.add_argument("--repo-root", default=".", help="Repository root")
     node_status.add_argument("--ccos-root", default="CCOS", help="CCOS root under repo")
     node_status.set_defaults(func=cmd_node_status)
+
+    node_template = node_sub.add_parser(
+        "print-commit-template",
+        help="Print recommended commit metadata template",
+    )
+    node_template.set_defaults(func=cmd_node_print_commit_template)
+
+    node_hook = node_sub.add_parser(
+        "install-commit-hook",
+        help="Install commit-msg hook for commit metadata",
+    )
+    node_hook.add_argument("--repo-root", default=".", help="Repository root")
+    node_hook.add_argument(
+        "--mode",
+        choices=["warn", "strict"],
+        default="strict",
+        help="Hook mode: warn prints tips; strict blocks invalid commits",
+    )
+    node_hook.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing non-ccos commit-msg hook with backup",
+    )
+    node_hook.set_defaults(func=cmd_node_install_commit_hook)
 
     # task
     task = subparsers.add_parser("task", help="Taskline commands")

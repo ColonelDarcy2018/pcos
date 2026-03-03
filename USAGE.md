@@ -39,6 +39,14 @@ cd <repo_root>
 ```bash
 /Users/zhuxiaowei/ccos/scripts/ccosctl hub report-daily --hub-root /Users/zhuxiaowei/ccos --commit-meta-mode strict --print-only
 ```
+6. 在项目仓库安装提交钩子（推荐）：
+```bash
+/Users/zhuxiaowei/ccos/scripts/ccosctl node install-commit-hook --repo-root <repo_root> --mode strict
+```
+7. 查看提交正文模板：
+```bash
+/Users/zhuxiaowei/ccos/scripts/ccosctl node print-commit-template
+```
 
 ### 3.1 项目目录发起任务如何继承中枢元协议
 
@@ -50,6 +58,7 @@ cd <repo_root>
    - 环境变量 `CCOS_HUB_ROOT`
    - 当前目录向上查找 Hub 结构
    - 默认回退 `~/ccos`
+4. 对于项目目录下的提交规范，建议启用 `node install-commit-hook`，避免日报汇总时缺少字段。
 
 ## 4. 任务闭环（建议）
 

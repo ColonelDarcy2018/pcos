@@ -29,6 +29,11 @@ hours: <1.5h>
 
 - 日报脚本会优先提取：提交标题、`taskline_id`、`next`、`hours`。
 - 模板文件：`assets/patterns/skills/git-daily-report/templates/commit-message-template.txt`
+- 推荐在每个项目仓库安装 `commit-msg` 钩子，提交时前置校验字段完整性：
+
+```bash
+/Users/zhuxiaowei/ccos/scripts/ccosctl node install-commit-hook --repo-root <repo_root> --mode strict
+```
 
 ### 2. 无提交时回退 Diff（Diff-Fallback）
 
@@ -108,6 +113,9 @@ python3 assets/patterns/skills/git-daily-report/scripts/update_federated_daily_r
 
 # 打印推荐模板
 python3 assets/patterns/skills/git-daily-report/scripts/update_daily_report.py --print-commit-template
+
+# 或使用 ccosctl 在任意目录打印模板
+/Users/zhuxiaowei/ccos/scripts/ccosctl node print-commit-template
 ```
 
 统一入口（推荐）：
