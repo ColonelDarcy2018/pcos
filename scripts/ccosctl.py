@@ -24,11 +24,31 @@ ANCHOR_DOC_NAME = "ccos-unified-protocol.md"
 TASK_INDEX_REL = "capture/tasklines/task-index.md"
 TASKLINES_REL = "capture/tasklines"
 TASK_REQUIRED_FIELDS = ("project_id", "repo_root", "ccos_node")
-COMMIT_META_TEMPLATE = """taskline_id: <project/taskline>
+COMMIT_META_TEMPLATE = """taskline_id: <project/node/taskline>
 work_summary: <本次工作摘要>
 next: <下一步动作>
 hours: <1.5h>"""
 COMMIT_HOOK_MARKER = "CCOS-COMMIT-META-HOOK"
+
+TASK_INDEX_HEADER_NEW = [
+    "taskline_id",
+    "标题",
+    "状态",
+    "优先级",
+    "project_id",
+    "ccos_node",
+    "任务文档",
+    "来源 CCOS",
+]
+TASK_INDEX_HEADER_LEGACY = [
+    "taskline_id",
+    "标题",
+    "状态",
+    "优先级",
+    "关联项目",
+    "任务文档",
+    "来源 CCOS",
+]
 
 
 @dataclass

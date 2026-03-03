@@ -1,9 +1,9 @@
 # CCOS 中枢全量迁移与文档同步
 
-- taskline_id: `ccos/hub/unification-migration-20260303`
+- taskline_id: `ccos/default/unification-migration-20260303`
 - project_id: `ccos`
 - repo_root: `/Users/zhuxiaowei/ccos`
-- ccos_node: `CCOS`
+- ccos_node: `default`
 - status: `done`
 - updated_at: `2026-03-03 17:35 +08:00`
 

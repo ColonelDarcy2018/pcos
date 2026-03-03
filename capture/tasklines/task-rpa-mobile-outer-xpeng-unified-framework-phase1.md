@@ -5,7 +5,8 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `in_progress`
-- updated_at: `2026-03-02`
+- updated_at: `2026-03-03`
+- updated_by: `ccosctl task checkpoint`
 
 ## 背景
 
@@ -25,3 +26,7 @@
 1. 优先推进 `T11`（调度接入层最小落地）。
 2. 小步推进 `T19`（`app.py` 渐进重构）并保持评审节奏。
 3. 跟进 `T15/T16` 完成回调映射与回归验证清单。
+
+## Progress Log
+- 2026-03-03 19:22:39 2026-03-03: T19第二刀完成（author_route_navigation + test_author_route_navigation），app.py转兼容封装；下一步T19第三刀
+- 2026-03-03 19:29:27 2026-03-03: 将 CCOS/context 核心路由文件纳入 Git 管理，补充 p0-rules/ai-playbook 约束

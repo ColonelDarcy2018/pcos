@@ -30,6 +30,12 @@
 4. 跨项目摘要必须回写 `~/ccos/capture/tasklines/**`。
 5. 联邦索引与联邦日报由 `~/ccos` 侧脚本生成。
 
+## 任务线命名约定（MUST）
+
+1. Hub 任务线 `taskline_id` 统一格式：`project_id/ccos_node/task_slug`。
+2. `ccos_node` 是 Node 标识，不等同于 `taskline_id`；`taskline_id` 前两段等于 `project_id/ccos_node`。
+3. 任务线文档中的 `project_id`、`ccos_node` 必须与 `taskline_id` 前两段保持一致。
+
 ## 项目目录执行的中枢继承（MUST）
 
 1. 每个 Node 的 `CCOS/protocol/p0-rules.md` 与 `CCOS/protocol/ai-playbook.md` 必须显式引用本协议：

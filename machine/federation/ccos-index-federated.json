@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-03T09:16:15+00:00",
+  "generated_at": "2026-03-03T11:24:15+00:00",
   "source_registry": "machine/federation/project-registry.json",
   "summary": {
-    "projects": 4,
-    "nodes_total": 4,
-    "nodes_enabled": 4,
-    "nodes_indexed": 4
+    "projects": 5,
+    "nodes_total": 5,
+    "nodes_enabled": 5,
+    "nodes_indexed": 5
   },
   "nodes": [
     {
@@ -75,6 +75,24 @@
       "docs_count": 27,
       "stats": {
         "docs": 27,
+        "errors": 0,
+        "warnings": 0
+      },
+      "warnings": []
+    },
+    {
+      "project_id": "ccos",
+      "node_id": "default",
+      "scope": "repo",
+      "enabled": true,
+      "repo_root": "/Users/zhuxiaowei/ccos",
+      "ccos_root": "CCOS",
+      "ccos_exists": true,
+      "index_exists": true,
+      "index_generated_at": "2026-03-03T10:50:51+00:00",
+      "docs_count": 9,
+      "stats": {
+        "docs": 9,
         "errors": 0,
         "warnings": 0
       },

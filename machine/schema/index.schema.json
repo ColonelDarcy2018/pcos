@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "PCOS Machine Index (V1)",
+  "title": "CCOS Machine Index (V1)",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "assets"],
