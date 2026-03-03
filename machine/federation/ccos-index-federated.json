@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-03-03T09:16:15+00:00",
+  "source_registry": "machine/federation/project-registry.json",
+  "summary": {
+    "projects": 4,
+    "nodes_total": 4,
+    "nodes_enabled": 4,
+    "nodes_indexed": 4
+  },
+  "nodes": [
+    {
+      "project_id": "rpa-mobile",
+      "node_id": "outer",
+      "scope": "repo",
+      "enabled": true,
+      "repo_root": "/Users/zhuxiaowei/apps/rpa-mobile",
+      "ccos_root": "CCOS",
+      "ccos_exists": true,
+      "index_exists": true,
+      "index_generated_at": null,
+      "docs_count": 0,
+      "stats": {
+        "documents": 32,
+        "categories": 5
+      },
+      "warnings": []
+    },
+    {
+      "project_id": "wanling-tower",
+      "node_id": "default",
+      "scope": "repo",
+      "enabled": true,
+      "repo_root": "/Users/zhuxiaowei/apps/game_demo/wanling-tower",
+      "ccos_root": "CCOS",
+      "ccos_exists": true,
+      "index_exists": true,
+      "index_generated_at": "2026-03-03T09:12:33+00:00",
+      "docs_count": 41,
+      "stats": {
+        "docs": 41,
+        "errors": 0,
+        "warnings": 0
+      },
+      "warnings": []
+    },
+    {
+      "project_id": "myth-td-prototype",
+      "node_id": "default",
+      "scope": "repo",
+      "enabled": true,
+      "repo_root": "/Users/zhuxiaowei/apps/game_demo/myth-td-prototype",
+      "ccos_root": "CCOS",
+      "ccos_exists": true,
+      "index_exists": true,
+      "index_generated_at": "2026-03-03T09:12:33+00:00",
+      "docs_count": 19,
+      "stats": {
+        "docs": 19,
+        "errors": 0,
+        "warnings": 0
+      },
+      "warnings": []
+    },
+    {
+      "project_id": "game_service",
+      "node_id": "default",
+      "scope": "repo",
+      "enabled": true,
+      "repo_root": "/Users/zhuxiaowei/game_service",
+      "ccos_root": "CCOS",
+      "ccos_exists": true,
+      "index_exists": true,
+      "index_generated_at": "2026-03-03T09:12:33+00:00",
+      "docs_count": 27,
+      "stats": {
+        "docs": 27,
+        "errors": 0,
+        "warnings": 0
+      },
+      "warnings": []
+    }
+  ]
+}

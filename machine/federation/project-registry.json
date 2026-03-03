@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-03-03T10:52:57+00:00",
+  "projects": [
+    {
+      "project_id": "rpa-mobile",
+      "repo_root": "/Users/zhuxiaowei/apps/rpa-mobile",
+      "enabled": true,
+      "default_branch": "main",
+      "ccos_nodes": [
+        {
+          "node_id": "outer",
+          "ccos_root": "CCOS",
+          "scope": "repo",
+          "enabled": true
+        },
+        {
+          "node_id": "inner-rpa-dev-platform",
+          "ccos_root": "rpa-dev-platform/CCOS",
+          "scope": "module",
+          "enabled": false,
+          "note": "预留内层节点，待该目录初始化后启用。"
+        }
+      ]
+    },
+    {
+      "project_id": "wanling-tower",
+      "repo_root": "/Users/zhuxiaowei/apps/game_demo/wanling-tower",
+      "enabled": true,
+      "default_branch": "main",
+      "ccos_nodes": [
+        {
+          "node_id": "default",
+          "ccos_root": "CCOS",
+          "scope": "repo",
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "project_id": "myth-td-prototype",
+      "repo_root": "/Users/zhuxiaowei/apps/game_demo/myth-td-prototype",
+      "enabled": true,
+      "default_branch": "main",
+      "ccos_nodes": [
+        {
+          "node_id": "default",
+          "ccos_root": "CCOS",
+          "scope": "repo",
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "project_id": "game_service",
+      "repo_root": "/Users/zhuxiaowei/game_service",
+      "enabled": true,
+      "default_branch": "main",
+      "ccos_nodes": [
+        {
+          "node_id": "default",
+          "ccos_root": "CCOS",
+          "scope": "repo",
+          "enabled": true,
+          "note": "已结束旧任务线，纳入 CCOS 联邦治理。"
+        }
+      ]
+    },
+    {
+      "project_id": "ccos",
+      "repo_root": "/Users/zhuxiaowei/ccos",
+      "enabled": true,
+      "default_branch": "main",
+      "ccos_nodes": [
+        {
+          "node_id": "default",
+          "ccos_root": "CCOS",
+          "scope": "repo",
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}
