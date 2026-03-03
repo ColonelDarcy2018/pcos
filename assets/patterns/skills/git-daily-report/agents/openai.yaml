@@ -1,4 +1,4 @@
 interface:
   display_name: "Git Daily Report"
   short_description: "Commit-First daily report with Diff-Fallback and optional sync"
-  default_prompt: "Use Commit-First (today's git commits) and Diff-Fallback (git diff HEAD when no commits) to generate today's report (今日完成/明日任务/工时), write back to capture/journals, and optionally commit/push."
+  default_prompt: "Use Commit-First (today's git commits) and Diff-Fallback (git diff HEAD when no commits) to generate today's report (今日完成/明日任务/工时), validate commit meta fields (taskline_id/next/hours) in warn mode, write back to capture/journals, and optionally commit/push."

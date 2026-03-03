@@ -28,6 +28,7 @@ hours: <1.5h>
 ```
 
 - 日报脚本会优先提取：提交标题、`taskline_id`、`next`、`hours`。
+- 模板文件：`assets/patterns/skills/git-daily-report/templates/commit-message-template.txt`
 
 ### 2. 无提交时回退 Diff（Diff-Fallback）
 
@@ -87,6 +88,33 @@ python3 assets/patterns/skills/git-daily-report/scripts/update_federated_daily_r
 
 - 输入：`machine/federation/project-registry.json` 纳管项目。
 - 策略：逐仓 Commit-First，项目无提交时自动 Diff-Fallback。
+
+## Commit Meta 校验模式
+
+日报脚本支持 `off/warn/strict` 三种模式：
+
+1. `off`：关闭校验。
+2. `warn`（默认）：发现提交缺少 `taskline_id/next/hours` 时提示但不中断。
+3. `strict`：发现缺失即退出失败（返回非 0）。
+
+示例：
+
+```bash
+# 单仓严格校验
+python3 assets/patterns/skills/git-daily-report/scripts/update_daily_report.py --repo . --commit-meta-mode strict --print-only
+
+# 联邦严格校验
+python3 assets/patterns/skills/git-daily-report/scripts/update_federated_daily_report.py --ccos-root . --commit-meta-mode strict --print-only
+
+# 打印推荐模板
+python3 assets/patterns/skills/git-daily-report/scripts/update_daily_report.py --print-commit-template
+```
+
+统一入口（推荐）：
+
+```bash
+/Users/zhuxiaowei/ccos/scripts/ccosctl hub report-daily --hub-root /Users/zhuxiaowei/ccos --commit-meta-mode warn --print-only
+```
 
 ## Output Template
 

@@ -1,0 +1,6 @@
+<type>(<scope>): <subject>
+
+taskline_id: <project/taskline>
+work_summary: <本次工作摘要>
+next: <下一步动作>
+hours: <1.5h>

@@ -790,6 +790,10 @@ def cmd_hub_report_daily(args: argparse.Namespace) -> int:
         cmd.extend(["--journal-root", args.journal_root])
     if args.print_only:
         cmd.append("--print-only")
+    if args.print_commit_template:
+        cmd.append("--print-commit-template")
+    if args.commit_meta_mode:
+        cmd.extend(["--commit-meta-mode", args.commit_meta_mode])
     if args.sync:
         cmd.append("--sync")
     if args.remote:
@@ -1039,6 +1043,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Journal path relative to hub root",
     )
     hub_report.add_argument("--print-only", action="store_true", help="Print only")
+    hub_report.add_argument(
+        "--commit-meta-mode",
+        choices=["off", "warn", "strict"],
+        default="warn",
+        help="Commit metadata check mode for federated report",
+    )
+    hub_report.add_argument(
+        "--print-commit-template",
+        action="store_true",
+        help="Print recommended commit metadata template and exit",
+    )
     hub_report.add_argument("--sync", action="store_true", help="Commit and push after write")
     hub_report.add_argument("--remote", default="origin", help="Git remote for sync")
     hub_report.add_argument("--branch", default=None, help="Git branch for sync")

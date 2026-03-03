@@ -24,6 +24,15 @@ NEXT_PATTERN = re.compile(
     r"^\s*(?:next|todo|next_actions|明日任务|下一步)\s*[:：]\s*(.+?)\s*$",
     re.IGNORECASE,
 )
+COMMIT_TEMPLATE = """taskline_id: <project/taskline>
+work_summary: <本次工作摘要>
+next: <下一步动作>
+hours: <1.5h>"""
+META_FIELD_LABELS = {
+    "taskline_id": "taskline_id",
+    "next": "next",
+    "hours": "hours",
+}
 
 
 @dataclass
@@ -41,6 +50,7 @@ class CommitRecord:
     taskline_id: str | None
     next_items: list[str]
     hours: float | None
+    missing_fields: list[str]
 
 
 def run_cmd(repo: pathlib.Path, *args: str, allow_fail: bool = False) -> CmdResult:
@@ -158,6 +168,14 @@ def collect_commit_records(repo: pathlib.Path, report_date: dt.date) -> list[Com
                 next_items.append(value)
 
         hours = parse_hours_from_text(body)
+        missing_fields: list[str] = []
+        if not taskline_id:
+            missing_fields.append("taskline_id")
+        if not next_items:
+            missing_fields.append("next")
+        if hours is None:
+            missing_fields.append("hours")
+
         commits.append(
             CommitRecord(
                 commit_hash=commit_hash,
@@ -166,10 +184,35 @@ def collect_commit_records(repo: pathlib.Path, report_date: dt.date) -> list[Com
                 taskline_id=taskline_id,
                 next_items=unique_keep_order(next_items),
                 hours=hours,
+                missing_fields=missing_fields,
             )
         )
 
     return commits
+
+
+def evaluate_commit_meta(commits: list[CommitRecord], mode: str) -> bool:
+    if mode == "off":
+        return False
+
+    issues: list[str] = []
+    for record in commits:
+        if not record.missing_fields:
+            continue
+        subject = trim_text(record.subject or record.commit_hash[:8], 70)
+        missing = "、".join(META_FIELD_LABELS.get(field, field) for field in record.missing_fields)
+        issues.append(f"- {subject} 缺少字段: {missing}")
+
+    if not issues:
+        return False
+
+    level = "ERROR" if mode == "strict" else "WARN"
+    print(f"[{level}] 检测到提交元信息不完整（推荐字段: taskline_id/next/hours）:", file=sys.stderr)
+    for line in issues:
+        print(line, file=sys.stderr)
+    print("[TIP] 推荐提交正文模板：", file=sys.stderr)
+    print(COMMIT_TEMPLATE, file=sys.stderr)
+    return mode == "strict"
 
 
 def build_from_commits(commits: list[CommitRecord]) -> tuple[list[str], list[str], str]:
@@ -567,6 +610,17 @@ def main() -> int:
         help="Report source priority. Default: commit-first.",
     )
     parser.add_argument(
+        "--commit-meta-mode",
+        choices=["off", "warn", "strict"],
+        default="warn",
+        help="Commit metadata check mode when using commit-first.",
+    )
+    parser.add_argument(
+        "--print-commit-template",
+        action="store_true",
+        help="Print recommended commit metadata template and exit.",
+    )
+    parser.add_argument(
         "--print-only",
         action="store_true",
         help="Print report only; do not write journal or sync.",
@@ -584,6 +638,9 @@ def main() -> int:
     if args.print_only and args.sync:
         print("--print-only and --sync cannot be used together.", file=sys.stderr)
         return 2
+    if args.print_commit_template:
+        print(COMMIT_TEMPLATE)
+        return 0
 
     repo = pathlib.Path(args.repo).resolve()
     if not (repo / ".git").exists():
@@ -601,6 +658,8 @@ def main() -> int:
     commits: list[CommitRecord] = []
     if args.prefer != "diff-only":
         commits = collect_commit_records(repo, report_date)
+        if commits and evaluate_commit_meta(commits, args.commit_meta_mode):
+            return 3
 
     if commits:
         done_items, todo_items, hours_text = build_from_commits(commits)

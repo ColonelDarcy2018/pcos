@@ -35,6 +35,10 @@ cd <repo_root>
 ```bash
 /Users/zhuxiaowei/ccos/scripts/ccosctl hub report-daily --hub-root /Users/zhuxiaowei/ccos
 ```
+5. 对提交元信息做严格门禁（可选）：
+```bash
+/Users/zhuxiaowei/ccos/scripts/ccosctl hub report-daily --hub-root /Users/zhuxiaowei/ccos --commit-meta-mode strict --print-only
+```
 
 ### 3.1 项目目录发起任务如何继承中枢元协议
 

@@ -20,6 +20,15 @@ NEXT_PATTERN = re.compile(
     r"^\s*(?:next|todo|next_actions|明日任务|下一步)\s*[:：]\s*(.+?)\s*$",
     re.IGNORECASE,
 )
+COMMIT_TEMPLATE = """taskline_id: <project/taskline>
+work_summary: <本次工作摘要>
+next: <下一步动作>
+hours: <1.5h>"""
+META_FIELD_LABELS = {
+    "taskline_id": "taskline_id",
+    "next": "next",
+    "hours": "hours",
+}
 
 
 @dataclass
@@ -35,6 +44,7 @@ class CommitDigest:
     taskline_id: str | None
     next_items: list[str]
     hours: float | None
+    missing_fields: list[str]
 
 
 @dataclass
@@ -54,6 +64,7 @@ class ProjectSnapshot:
     commit_tasklines: list[str]
     commit_hours: float | None
     next_items: list[str]
+    commit_meta_issues: list[str]
     error: str | None = None
 
 
@@ -232,12 +243,22 @@ def collect_commit_digests(repo_root: pathlib.Path, report_date: dt.date) -> tup
             if next_text:
                 next_items.append(next_text)
 
+        hours = parse_hours_from_text(body)
+        missing_fields: list[str] = []
+        if not taskline:
+            missing_fields.append("taskline_id")
+        if not next_items:
+            missing_fields.append("next")
+        if hours is None:
+            missing_fields.append("hours")
+
         digests.append(
             CommitDigest(
                 subject=subject,
                 taskline_id=taskline,
                 next_items=unique_keep_order(next_items),
-                hours=parse_hours_from_text(body),
+                hours=hours,
+                missing_fields=missing_fields,
             )
         )
 
@@ -262,6 +283,7 @@ def collect_snapshot(project_id: str, repo_root: pathlib.Path, report_date: dt.d
             commit_tasklines=[],
             commit_hours=None,
             next_items=[],
+            commit_meta_issues=[],
             error="仓库目录不存在",
         )
     if not (repo_root / ".git").exists():
@@ -281,6 +303,7 @@ def collect_snapshot(project_id: str, repo_root: pathlib.Path, report_date: dt.d
             commit_tasklines=[],
             commit_hours=None,
             next_items=[],
+            commit_meta_issues=[],
             error="不是 git 仓库（缺少 .git）",
         )
 
@@ -311,6 +334,7 @@ def collect_snapshot(project_id: str, repo_root: pathlib.Path, report_date: dt.d
             commit_tasklines=[],
             commit_hours=None,
             next_items=[],
+            commit_meta_issues=[],
             error=merged or "git status 执行失败",
         )
 
@@ -329,6 +353,13 @@ def collect_snapshot(project_id: str, repo_root: pathlib.Path, report_date: dt.d
 
     hours_values = [item.hours for item in commits if item.hours is not None]
     hours_total = sum(hours_values) if hours_values else None
+    commit_meta_issues: list[str] = []
+    for item in commits:
+        if not item.missing_fields:
+            continue
+        subject = trim_text(item.subject or "未命名提交", 60)
+        missing = "、".join(META_FIELD_LABELS.get(field, field) for field in item.missing_fields)
+        commit_meta_issues.append(f"{project_id}: {subject} 缺少字段 {missing}")
 
     return ProjectSnapshot(
         project_id=project_id,
@@ -346,8 +377,28 @@ def collect_snapshot(project_id: str, repo_root: pathlib.Path, report_date: dt.d
         commit_tasklines=commit_tasklines,
         commit_hours=hours_total,
         next_items=next_items,
+        commit_meta_issues=commit_meta_issues,
         error=log_error,
     )
+
+
+def evaluate_commit_meta(snapshots: list[ProjectSnapshot], mode: str) -> bool:
+    if mode == "off":
+        return False
+
+    issues = [issue for item in snapshots for issue in item.commit_meta_issues]
+    if not issues:
+        return False
+
+    level = "ERROR" if mode == "strict" else "WARN"
+    print(f"[{level}] 检测到部分项目提交元信息不完整（推荐字段: taskline_id/next/hours）:", file=sys.stderr)
+    for issue in issues[:50]:
+        print(f"- {issue}", file=sys.stderr)
+    if len(issues) > 50:
+        print(f"- ... 其余 {len(issues) - 50} 条略", file=sys.stderr)
+    print("[TIP] 推荐提交正文模板：", file=sys.stderr)
+    print(COMMIT_TEMPLATE, file=sys.stderr)
+    return mode == "strict"
 
 
 def build_done_items(snapshots: list[ProjectSnapshot], index_aggregated: bool) -> list[str]:
@@ -521,6 +572,17 @@ def main() -> int:
         help="Journal directory relative to CCOS root.",
     )
     parser.add_argument("--print-only", action="store_true", help="Only print report.")
+    parser.add_argument(
+        "--commit-meta-mode",
+        choices=["off", "warn", "strict"],
+        default="warn",
+        help="Commit metadata check mode.",
+    )
+    parser.add_argument(
+        "--print-commit-template",
+        action="store_true",
+        help="Print recommended commit metadata template and exit.",
+    )
     parser.add_argument("--sync", action="store_true", help="Commit and push after write.")
     parser.add_argument("--remote", default="origin", help="Git remote for --sync.")
     parser.add_argument("--branch", help="Git branch for --sync.")
@@ -535,6 +597,9 @@ def main() -> int:
     if args.print_only and args.sync:
         print("--print-only and --sync cannot be used together.", file=sys.stderr)
         return 2
+    if args.print_commit_template:
+        print(COMMIT_TEMPLATE)
+        return 0
 
     ccos_root = pathlib.Path(args.ccos_root).expanduser().resolve()
     if not (ccos_root / ".git").exists():
@@ -550,6 +615,8 @@ def main() -> int:
     registry = load_registry(registry_path)
     projects = collect_projects(registry)
     snapshots = [collect_snapshot(project_id, repo_root, report_date) for project_id, repo_root in projects]
+    if evaluate_commit_meta(snapshots, args.commit_meta_mode):
+        return 3
     index_aggregated = aggregate_index_if_needed(ccos_root, args.skip_index_aggregation)
 
     done = build_done_items(snapshots, index_aggregated=index_aggregated)
