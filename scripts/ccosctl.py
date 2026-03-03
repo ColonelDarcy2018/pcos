@@ -250,6 +250,44 @@ def strip_ticks(value: str) -> str:
     return value
 
 
+def split_markdown_row(line: str) -> list[str]:
+    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+
+
+def normalize_task_index_header(cell: str) -> str:
+    value = strip_ticks(cell).strip()
+    if value in {"taskline_id"}:
+        return "taskline_id"
+    if value in {"标题"}:
+        return "title"
+    if value in {"状态"}:
+        return "status"
+    if value in {"优先级"}:
+        return "priority"
+    if value in {"关联项目", "project_id"}:
+        return "project_id"
+    if value in {"ccos_node"}:
+        return "ccos_node"
+    if value in {"任务文档"}:
+        return "task_doc"
+    if value in {"来源 CCOS"}:
+        return "source_ccos"
+    return value
+
+
+def find_task_index_header(lines: list[str]) -> tuple[int | None, list[str]]:
+    for idx, line in enumerate(lines):
+        if not line.strip().startswith("|") or "---" in line:
+            continue
+        cells = split_markdown_row(line)
+        if not cells:
+            continue
+        normalized = [normalize_task_index_header(cell) for cell in cells]
+        if "taskline_id" in normalized and "task_doc" in normalized:
+            return idx, cells
+    return None, []
+
+
 def safe_task_filename(task_id: str) -> str:
     safe = re.sub(r"[^a-zA-Z0-9._-]+", "-", task_id.strip().lower()).strip("-")
     if not safe:
@@ -361,12 +399,14 @@ def find_task_file_by_id(task_dir: Path, task_id: str) -> Path | None:
 def ensure_task_index(index_path: Path) -> None:
     if index_path.is_file():
         return
+    header = "| " + " | ".join(TASK_INDEX_HEADER_NEW) + " |"
+    divider = "|" + "|".join(["---"] * len(TASK_INDEX_HEADER_NEW)) + "|"
     content = "\n".join(
         [
             "# Taskline Index",
             "",
-            "| taskline_id | 标题 | 状态 | 优先级 | 关联项目 | 任务文档 | 来源 CCOS |",
-            "|---|---|---|---|---|---|---|",
+            header,
+            divider,
             "",
         ]
     )
@@ -379,18 +419,24 @@ def build_task_index_row(
     status: str,
     priority: str,
     project_id: str,
+    node_id: str,
     task_doc: str,
     source_ccos: str,
+    index_header: list[str] | None = None,
 ) -> str:
-    cells = [
-        f"`{task_id}`",
-        title,
-        f"`{status}`",
-        f"`{priority}`",
-        f"`{project_id}`",
-        task_doc,
-        source_ccos,
-    ]
+    raw_header = index_header if index_header else TASK_INDEX_HEADER_NEW
+    normalized = [normalize_task_index_header(cell) for cell in raw_header]
+    value_map = {
+        "taskline_id": f"`{task_id}`",
+        "title": title,
+        "status": f"`{status}`",
+        "priority": f"`{priority}`",
+        "project_id": f"`{project_id}`",
+        "ccos_node": f"`{node_id}`",
+        "task_doc": task_doc,
+        "source_ccos": source_ccos,
+    }
+    cells = [value_map.get(key, "") for key in normalized]
     return "| " + " | ".join(cells) + " |"
 
 
@@ -401,19 +447,23 @@ def upsert_task_index_row(
     status: str,
     priority: str,
     project_id: str,
+    node_id: str,
     task_doc: str,
     source_ccos: str,
 ) -> None:
     ensure_task_index(index_path)
     lines = read_text(index_path).splitlines()
+    _, index_header = find_task_index_header(lines)
     row = build_task_index_row(
         task_id=task_id,
         title=title,
         status=status,
         priority=priority,
         project_id=project_id,
+        node_id=node_id,
         task_doc=task_doc,
         source_ccos=source_ccos,
+        index_header=index_header,
     )
     marker = f"`{task_id}`"
 
@@ -633,15 +683,25 @@ def lint_task_index_links(task_index: Path, task_dir: Path) -> tuple[list[LintIs
         return errors, warnings
 
     lines = read_text(task_index).splitlines()
+    _, header_cells = find_task_index_header(lines)
+    task_doc_idx = 5
+    if header_cells:
+        normalized = [normalize_task_index_header(cell) for cell in header_cells]
+        if "task_doc" in normalized:
+            task_doc_idx = normalized.index("task_doc")
+
     for line in lines:
         if not line.strip().startswith("|") or "`" not in line:
             continue
         if "---" in line:
             continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) < 7:
+        cells = split_markdown_row(line)
+        if len(cells) <= task_doc_idx:
             continue
-        task_doc = strip_ticks(cells[5])
+        first = normalize_task_index_header(cells[0]) if cells else ""
+        if first == "taskline_id":
+            continue
+        task_doc = strip_ticks(cells[task_doc_idx])
         if not task_doc or task_doc == "待创建":
             continue
         path = task_dir / task_doc
@@ -1051,6 +1111,7 @@ def cmd_task_start(args: argparse.Namespace) -> int:
         status="in_progress",
         priority=args.priority,
         project_id=args.project_id,
+        node_id=args.node_id,
         task_doc=task_file.name,
         source_ccos=source_ccos_path(repo_root),
     )
