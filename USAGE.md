@@ -31,9 +31,9 @@ cd <repo_root>
 ```bash
 /Users/zhuxiaowei/ccos/scripts/ccosctl hub lint --hub-root /Users/zhuxiaowei/ccos
 ```
-4. 在任意目录生成联邦日报（当前仍用既有脚本，后续并入 `ccosctl`）：
+4. 在任意目录生成联邦日报：
 ```bash
-python3 /Users/zhuxiaowei/ccos/assets/patterns/skills/git-daily-report/scripts/update_federated_daily_report.py --ccos-root /Users/zhuxiaowei/ccos
+/Users/zhuxiaowei/ccos/scripts/ccosctl hub report-daily --hub-root /Users/zhuxiaowei/ccos
 ```
 
 ### 3.1 项目目录发起任务如何继承中枢元协议

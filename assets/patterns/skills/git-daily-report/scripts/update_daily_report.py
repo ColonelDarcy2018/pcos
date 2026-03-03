@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a daily report strictly from git diff and optionally sync to remote."""
+"""Generate daily report with Commit-First and Diff-Fallback strategy."""
 
 from __future__ import annotations
 
@@ -17,6 +17,13 @@ TAG_PATTERN = re.compile(
     r"^\s*(?:[-*+]\s*)?(DONE|TODO|NOW|WAITING)\b[:：-]?\s*(.*)$", re.IGNORECASE
 )
 CLOCK_PATTERN = re.compile(r"=>\s*([0-9]{2}):([0-9]{2}):([0-9]{2})")
+TASKLINE_PATTERN = re.compile(
+    r"^\s*(?:taskline_id|taskline|task_id|任务线)\s*[:：]\s*(.+?)\s*$", re.IGNORECASE
+)
+NEXT_PATTERN = re.compile(
+    r"^\s*(?:next|todo|next_actions|明日任务|下一步)\s*[:：]\s*(.+?)\s*$",
+    re.IGNORECASE,
+)
 
 
 @dataclass
@@ -24,6 +31,16 @@ class CmdResult:
     stdout: str
     stderr: str
     code: int
+
+
+@dataclass
+class CommitRecord:
+    commit_hash: str
+    subject: str
+    body: str
+    taskline_id: str | None
+    next_items: list[str]
+    hours: float | None
 
 
 def run_cmd(repo: pathlib.Path, *args: str, allow_fail: bool = False) -> CmdResult:
@@ -47,6 +64,141 @@ def parse_date(date_text: str | None) -> dt.date:
     return dt.datetime.strptime(date_text, "%Y-%m-%d").date()
 
 
+def format_hours(value: float) -> str:
+    text = f"{value:.1f}".rstrip("0").rstrip(".")
+    return f"{text}h"
+
+
+def trim_text(text: str, limit: int = 80) -> str:
+    if len(text) <= limit:
+        return text
+    return text[: limit - 3].rstrip() + "..."
+
+
+def normalize_text(line: str) -> str:
+    text = line.strip()
+    text = re.sub(r"^[-*+]\s*", "", text)
+    text = text.replace("[[", "").replace("]]", "")
+    text = re.sub(r"\s+", " ", text)
+    return text.strip(" -:：")
+
+
+def unique_keep_order(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for item in items:
+        key = item.strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        result.append(item)
+    return result
+
+
+def parse_hours_from_text(text: str) -> float | None:
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        low = line.lower()
+        if not any(key in low for key in ("hours", "工时", "耗时", "duration")):
+            continue
+
+        m_h = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*h\b", line, re.IGNORECASE)
+        if m_h:
+            return float(m_h.group(1))
+
+        m_cn = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*小时", line)
+        if m_cn:
+            return float(m_cn.group(1))
+    return None
+
+
+def collect_commit_records(repo: pathlib.Path, report_date: dt.date) -> list[CommitRecord]:
+    start = dt.datetime.combine(report_date, dt.time.min)
+    end = start + dt.timedelta(days=1)
+
+    result = run_cmd(
+        repo,
+        "git",
+        "-c",
+        "core.quotepath=false",
+        "log",
+        "--no-merges",
+        f"--since={start:%Y-%m-%d %H:%M:%S}",
+        f"--until={end:%Y-%m-%d %H:%M:%S}",
+        "--pretty=format:%H%x1f%s%x1f%b%x1e",
+        "--",
+    )
+
+    commits: list[CommitRecord] = []
+    for chunk in result.stdout.split("\x1e"):
+        item = chunk.strip()
+        if not item:
+            continue
+        parts = item.split("\x1f")
+        commit_hash = parts[0].strip() if len(parts) > 0 else ""
+        subject = parts[1].strip() if len(parts) > 1 else ""
+        body = parts[2].strip() if len(parts) > 2 else ""
+
+        taskline_id = None
+        for raw in body.splitlines():
+            match = TASKLINE_PATTERN.match(raw)
+            if match:
+                taskline_id = normalize_text(match.group(1))
+                break
+
+        next_items: list[str] = []
+        for raw in body.splitlines():
+            match = NEXT_PATTERN.match(raw)
+            if not match:
+                continue
+            value = normalize_text(match.group(1))
+            if value:
+                next_items.append(value)
+
+        hours = parse_hours_from_text(body)
+        commits.append(
+            CommitRecord(
+                commit_hash=commit_hash,
+                subject=subject,
+                body=body,
+                taskline_id=taskline_id,
+                next_items=unique_keep_order(next_items),
+                hours=hours,
+            )
+        )
+
+    return commits
+
+
+def build_from_commits(commits: list[CommitRecord]) -> tuple[list[str], list[str], str]:
+    done: list[str] = [f"基于当日 git 提交生成日报（共 {len(commits)} 条，Commit-First）。"]
+    for record in commits[:6]:
+        subject = trim_text(record.subject or record.commit_hash[:8], 90)
+        if record.taskline_id:
+            done.append(f"{subject}（任务线: {record.taskline_id}）")
+        else:
+            done.append(subject)
+
+    todo: list[str] = []
+    for record in commits:
+        todo.extend(record.next_items)
+    todo = unique_keep_order(todo)
+    if not todo:
+        for record in commits[:4]:
+            subject = trim_text(record.subject or record.commit_hash[:8], 70)
+            todo.append(f"继续推进 {subject} 的后续收口与验证。")
+
+    hours_values = [item.hours for item in commits if item.hours is not None]
+    if hours_values:
+        hours_text = f"{format_hours(sum(hours_values))}（由 commit 元数据累计）"
+    else:
+        hours_text = "待补充（commit 未发现工时字段）"
+
+    return unique_keep_order(done)[:8], unique_keep_order(todo)[:6], hours_text
+
+
 def parse_status_entries(status_text: str) -> list[tuple[str, str]]:
     entries: list[tuple[str, str]] = []
     for raw in status_text.splitlines():
@@ -59,21 +211,6 @@ def parse_status_entries(status_text: str) -> list[tuple[str, str]]:
             continue
         entries.append((code, path))
     return entries
-
-
-def parse_name_status(name_status_text: str) -> dict[str, str]:
-    result: dict[str, str] = {}
-    for raw in name_status_text.splitlines():
-        if not raw.strip():
-            continue
-        parts = raw.split("\t")
-        if len(parts) < 2:
-            continue
-        status = parts[0].strip()
-        path = parts[-1].strip()
-        if path:
-            result[path] = status
-    return result
 
 
 def parse_numstat(numstat_text: str) -> dict[str, tuple[int | None, int | None]]:
@@ -117,14 +254,6 @@ def parse_diff_by_file(diff_text: str) -> tuple[dict[str, list[str]], dict[str, 
     return added, removed
 
 
-def normalize_text(line: str) -> str:
-    text = line.strip()
-    text = re.sub(r"^[-*+]\s*", "", text)
-    text = text.replace("[[", "").replace("]]", "")
-    text = re.sub(r"\s+", " ", text)
-    return text.strip(" -:：")
-
-
 def is_metadata_line(line: str) -> bool:
     text = line.strip()
     if not text or text in {"-", "--", "---"}:
@@ -136,12 +265,6 @@ def is_metadata_line(line: str) -> bool:
     if text.startswith("```"):
         return True
     return False
-
-
-def trim_text(text: str, limit: int = 80) -> str:
-    if len(text) <= limit:
-        return text
-    return text[: limit - 3].rstrip() + "..."
 
 
 def build_net_added_by_file(
@@ -184,18 +307,6 @@ def collect_untracked_lines(repo: pathlib.Path, untracked_paths: list[str]) -> d
     return result
 
 
-def unique_keep_order(items: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for item in items:
-        key = item.strip()
-        if not key or key in seen:
-            continue
-        seen.add(key)
-        result.append(item)
-    return result
-
-
 def extract_tagged_items(lines: list[str]) -> tuple[list[str], list[str]]:
     done: list[str] = []
     todo: list[str] = []
@@ -217,7 +328,7 @@ def extract_tagged_items(lines: list[str]) -> tuple[list[str], list[str]]:
     return unique_keep_order(done), unique_keep_order(todo)
 
 
-def extract_hours(lines: list[str]) -> str:
+def extract_hours_from_lines(lines: list[str]) -> str:
     for raw in lines:
         if "工时" not in raw:
             continue
@@ -235,10 +346,10 @@ def extract_hours(lines: list[str]) -> str:
             continue
         hh, mm, ss = int(m.group(1)), int(m.group(2)), int(m.group(3))
         total_seconds += hh * 3600 + mm * 60 + ss
+
     if total_seconds > 0:
         hours = total_seconds / 3600
-        text = f"{hours:.1f}".rstrip("0").rstrip(".")
-        return f"{text}h（由git diff中的CLOCK累计）"
+        return f"{format_hours(hours)}（由git diff中的CLOCK累计）"
     return "待补充（git diff 未发现工时字段）"
 
 
@@ -268,12 +379,12 @@ def build_done_from_diff(
     created = sum(1 for code, _ in status_entries if code == "??")
     total = len(status_entries)
     done: list[str] = [
-        f"基于 git diff 完成 {total} 个文档变更同步（修改 {modified}，新增 {created}）。"
+        f"基于 git diff 生成日报（Diff-Fallback）：{total} 个文档变更（修改 {modified}，新增 {created}）。"
     ]
 
     if done_tagged:
         done.extend(done_tagged[:5])
-        return unique_keep_order(done)[:6]
+        return unique_keep_order(done)[:7]
 
     highlights = pick_file_highlights(net_added_by_file)
     ranked_paths = sorted(
@@ -296,13 +407,10 @@ def build_done_from_diff(
         else:
             done.append(prefix)
 
-    return unique_keep_order(done)[:6]
+    return unique_keep_order(done)[:7]
 
 
-def build_todo_from_diff(
-    todo_tagged: list[str],
-    status_entries: list[tuple[str, str]],
-) -> list[str]:
+def build_todo_from_diff(todo_tagged: list[str], status_entries: list[tuple[str, str]]) -> list[str]:
     if todo_tagged:
         return todo_tagged[:6]
 
@@ -400,9 +508,50 @@ def sync_repo(
     return f"[SYNC] 已提交并推送：{commit_id} -> {remote}/{target_branch}"
 
 
+def build_from_diff(repo: pathlib.Path) -> tuple[list[str], list[str], str]:
+    status_short = run_cmd(repo, "git", "-c", "core.quotepath=false", "status", "--short").stdout
+    numstat_text = run_cmd(
+        repo, "git", "-c", "core.quotepath=false", "diff", "--numstat", "HEAD", "--"
+    ).stdout
+    diff_text = run_cmd(
+        repo,
+        "git",
+        "-c",
+        "core.quotepath=false",
+        "diff",
+        "--unified=0",
+        "--no-color",
+        "HEAD",
+        "--",
+    ).stdout
+
+    status_entries = parse_status_entries(status_short)
+    numstat = parse_numstat(numstat_text)
+    added_by_file, removed_by_file = parse_diff_by_file(diff_text)
+    net_added_by_file = build_net_added_by_file(added_by_file, removed_by_file)
+
+    untracked_paths = [path for code, path in status_entries if code == "??"]
+    untracked_lines = collect_untracked_lines(repo, untracked_paths)
+    for path, lines in untracked_lines.items():
+        net_added_by_file[path] = lines
+
+    for _, path in status_entries:
+        net_added_by_file.setdefault(path, [])
+
+    flattened_lines: list[str] = []
+    for path in net_added_by_file:
+        flattened_lines.extend(net_added_by_file[path])
+
+    done_tagged, todo_tagged = extract_tagged_items(flattened_lines)
+    hours_text = extract_hours_from_lines(flattened_lines)
+    done_items = build_done_from_diff(status_entries, numstat, net_added_by_file, done_tagged)
+    todo_items = build_todo_from_diff(todo_tagged, status_entries)
+    return done_items, todo_items, hours_text
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate a daily report strictly from uncommitted git diff."
+        description="Generate daily report using Commit-First and Diff-Fallback strategy."
     )
     parser.add_argument("--repo", default=".", help="Repository root path.")
     parser.add_argument("--date", help="Date in YYYY-MM-DD, default today.")
@@ -410,6 +559,12 @@ def main() -> int:
         "--journal-root",
         default="capture/journals",
         help="Journal directory relative to repo.",
+    )
+    parser.add_argument(
+        "--prefer",
+        choices=["commit-first", "diff-only"],
+        default="commit-first",
+        help="Report source priority. Default: commit-first.",
     )
     parser.add_argument(
         "--print-only",
@@ -439,41 +594,18 @@ def main() -> int:
     journal_rel = pathlib.Path(args.journal_root) / report_date.strftime("%Y_%m_%d.md")
     journal_path = repo / journal_rel
 
-    status_short = run_cmd(repo, "git", "-c", "core.quotepath=false", "status", "--short").stdout
-    name_status_text = run_cmd(
-        repo, "git", "-c", "core.quotepath=false", "diff", "--name-status", "HEAD", "--"
-    ).stdout
-    numstat_text = run_cmd(
-        repo, "git", "-c", "core.quotepath=false", "diff", "--numstat", "HEAD", "--"
-    ).stdout
-    diff_text = run_cmd(
-        repo, "git", "-c", "core.quotepath=false", "diff", "--unified=0", "--no-color", "HEAD", "--"
-    ).stdout
+    done_items: list[str]
+    todo_items: list[str]
+    hours_text: str
 
-    status_entries = parse_status_entries(status_short)
-    name_status = parse_name_status(name_status_text)
-    numstat = parse_numstat(numstat_text)
-    added_by_file, removed_by_file = parse_diff_by_file(diff_text)
-    net_added_by_file = build_net_added_by_file(added_by_file, removed_by_file)
+    commits: list[CommitRecord] = []
+    if args.prefer != "diff-only":
+        commits = collect_commit_records(repo, report_date)
 
-    untracked_paths = [path for code, path in status_entries if code == "??"]
-    untracked_lines = collect_untracked_lines(repo, untracked_paths)
-    for path, lines in untracked_lines.items():
-        net_added_by_file[path] = lines
-        if path not in name_status:
-            name_status[path] = "A"
-
-    for _, path in status_entries:
-        net_added_by_file.setdefault(path, [])
-
-    flattened_net_lines: list[str] = []
-    for path in net_added_by_file:
-        flattened_net_lines.extend(net_added_by_file[path])
-
-    done_tagged, todo_tagged = extract_tagged_items(flattened_net_lines)
-    hours_text = extract_hours(flattened_net_lines)
-    done_items = build_done_from_diff(status_entries, numstat, net_added_by_file, done_tagged)
-    todo_items = build_todo_from_diff(todo_tagged, status_entries)
+    if commits:
+        done_items, todo_items, hours_text = build_from_commits(commits)
+    else:
+        done_items, todo_items, hours_text = build_from_diff(repo)
 
     report = build_markdown(done_items, todo_items, hours_text)
     print(report)

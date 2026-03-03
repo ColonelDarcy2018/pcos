@@ -10,6 +10,7 @@
 # Hub
 /Users/zhuxiaowei/ccos/scripts/ccosctl hub lint --hub-root /Users/zhuxiaowei/ccos
 /Users/zhuxiaowei/ccos/scripts/ccosctl hub sync-index --hub-root /Users/zhuxiaowei/ccos
+/Users/zhuxiaowei/ccos/scripts/ccosctl hub report-daily --hub-root /Users/zhuxiaowei/ccos --print-only
 
 # Node
 /Users/zhuxiaowei/ccos/scripts/ccosctl node validate --repo-root /Users/zhuxiaowei/apps/rpa-mobile --ccos-root CCOS

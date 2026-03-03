@@ -761,6 +761,51 @@ def cmd_hub_lint(args: argparse.Namespace) -> int:
     return EXIT_OK if not errors else EXIT_RULE
 
 
+def cmd_hub_report_daily(args: argparse.Namespace) -> int:
+    try:
+        hub_root = resolve_hub_root(args.hub_root)
+    except RuntimeError as exc:
+        print(f"[error] {exc}")
+        return EXIT_ARG
+
+    script = (
+        hub_root
+        / "assets"
+        / "patterns"
+        / "skills"
+        / "git-daily-report"
+        / "scripts"
+        / "update_federated_daily_report.py"
+    )
+    if not script.is_file():
+        print(f"[error] federated daily report script missing: {script}")
+        return EXIT_IO
+
+    cmd = [sys.executable, str(script), "--ccos-root", str(hub_root)]
+    if args.date:
+        cmd.extend(["--date", args.date])
+    if args.registry:
+        cmd.extend(["--registry", args.registry])
+    if args.journal_root:
+        cmd.extend(["--journal-root", args.journal_root])
+    if args.print_only:
+        cmd.append("--print-only")
+    if args.sync:
+        cmd.append("--sync")
+    if args.remote:
+        cmd.extend(["--remote", args.remote])
+    if args.branch:
+        cmd.extend(["--branch", args.branch])
+    if args.commit_message:
+        cmd.extend(["--commit-message", args.commit_message])
+    if args.skip_index_aggregation:
+        cmd.append("--skip-index-aggregation")
+
+    print(f"[run] {command_to_text(cmd)}")
+    code = run_subprocess(cmd, cwd=hub_root)
+    return EXIT_OK if code == 0 else EXIT_IO
+
+
 def cmd_node_validate(args: argparse.Namespace) -> int:
     repo_root = resolve_path(Path.cwd(), args.repo_root)
     return run_node_p0(repo_root=repo_root, ccos_root=args.ccos_root, command="validate")
@@ -983,6 +1028,27 @@ def build_parser() -> argparse.ArgumentParser:
     hub_lint.add_argument("--registry", default=REGISTRY_DEFAULT, help="Registry path")
     hub_lint.add_argument("--strict", action="store_true", help="Treat warnings as errors")
     hub_lint.set_defaults(func=cmd_hub_lint)
+
+    hub_report = hub_sub.add_parser("report-daily", help="Generate federated daily report")
+    hub_report.add_argument("--hub-root", default=None, help="Hub root path (default auto-detect)")
+    hub_report.add_argument("--date", default=None, help="Date in YYYY-MM-DD")
+    hub_report.add_argument("--registry", default=REGISTRY_DEFAULT, help="Registry path")
+    hub_report.add_argument(
+        "--journal-root",
+        default="capture/journals",
+        help="Journal path relative to hub root",
+    )
+    hub_report.add_argument("--print-only", action="store_true", help="Print only")
+    hub_report.add_argument("--sync", action="store_true", help="Commit and push after write")
+    hub_report.add_argument("--remote", default="origin", help="Git remote for sync")
+    hub_report.add_argument("--branch", default=None, help="Git branch for sync")
+    hub_report.add_argument("--commit-message", default=None, help="Commit message override")
+    hub_report.add_argument(
+        "--skip-index-aggregation",
+        action="store_true",
+        help="Skip federation index aggregation before report",
+    )
+    hub_report.set_defaults(func=cmd_hub_report_daily)
 
     # node
     node = subparsers.add_parser("node", help="Node-level commands")
