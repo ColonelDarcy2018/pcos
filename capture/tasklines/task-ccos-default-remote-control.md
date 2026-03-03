@@ -1,9 +1,9 @@
-# 手机远程控制与自动化闭环
+# 手机跨网络远程控制 PC Codex 任务
 
-- taskline_id: `rpa-mobile/outer/remote-control`
-- project_id: `rpa-mobile`
-- repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
-- ccos_node: `outer`
+- taskline_id: `ccos/default/remote-control`
+- project_id: `ccos`
+- repo_root: `/Users/zhuxiaowei/ccos`
+- ccos_node: `default`
 - status: `in_progress`
 - updated_at: `2026-03-03`
 

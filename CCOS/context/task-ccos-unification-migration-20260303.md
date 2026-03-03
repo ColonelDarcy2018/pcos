@@ -38,7 +38,7 @@
    - 为 4 个项目 `CCOS/protocol/p0-rules.md` 与 `ai-playbook.md` 增加 Node -> Hub 元协议锚点
    - `ccosctl hub lint` 新增锚点校验，缺失即失败
 8. 联邦治理回归
-   - 补齐缺失任务线文档：`capture/tasklines/task-rpa-mobile-outer-remote-control.md`
+   - 补齐缺失任务线文档：`capture/tasklines/task-ccos-default-remote-control.md`
    - 当前校验结果：`hub lint` 为 `errors=0 warnings=0`
 
 ## 关键决策
