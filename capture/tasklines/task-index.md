@@ -5,6 +5,7 @@
 | taskline_id | 标题 | 状态 | 优先级 | 关联项目 | 任务文档 | 来源 CCOS |
 |---|---|---|---|---|---|---|
 | `ccos/default/remote-control` | 手机跨网络远程控制 PC Codex 任务 | `in_progress` | `P0` | `ccos` | `task-ccos-default-remote-control.md` | `ccos/CCOS` |
+| `ccos/default/dedup-daily-automation-v1` | CCOS 去冗余改造与自动日报闭环 V1 | `in_progress` | `P0` | `ccos` | `task-ccos-default-dedup-daily-automation-v1.md` | `ccos/CCOS` |
 | `rpa-mobile/outer/xpeng-unified-framework-phase1` | 小鹏汽车项目通用流程框架 Phase 1 | `in_progress` | `P0` | `rpa-mobile` | `task-rpa-mobile-outer-xpeng-unified-framework-phase1.md` | `apps/rpa-mobile/CCOS` |
 | `rpa-mobile/outer/rpa-dev-platform-export-iteration` | RPA 开发平台导出流程包能力迭代 | `in_progress` | `P1` | `rpa-mobile` | `task-rpa-mobile-outer-rpa-dev-platform-export-iteration.md` | `apps/rpa-mobile/CCOS` |
 | `wanling-tower/gameplay` | 万灵塔玩法重基线推进 | `in_progress` | `P1` | `wanling-tower` | `待创建` | `apps/game_demo/wanling-tower/CCOS` |

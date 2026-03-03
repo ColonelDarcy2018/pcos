@@ -1,0 +1,173 @@
+{
+  "generated_at": "2026-03-03T12:08:33+00:00",
+  "ccos_root": "CCOS",
+  "stats": {
+    "docs": 10,
+    "errors": 0,
+    "warnings": 0
+  },
+  "docs": [
+    {
+      "path": "CCOS/knowledge/README.md",
+      "id": "ccos-knowledge-overview",
+      "domain": "knowledge",
+      "tags": [
+        "ccos",
+        "overview"
+      ],
+      "related": [
+        "../protocol/p0-rules.md",
+        "../protocol/ai-playbook.md"
+      ],
+      "has_ccos_index": true,
+      "updated_at": "2026-03-03T12:07:33.639062+00:00"
+    },
+    {
+      "path": "CCOS/knowledge/architecture/README.md",
+      "id": "ccos-knowledge-architecture-readme",
+      "domain": "architecture",
+      "tags": [
+        "ccos",
+        "architecture"
+      ],
+      "related": [
+        "../../protocol/p0-rules.md",
+        "ccos-governance-dedup-and-daily-automation-v1.md",
+        "remote-codex-control-mvp.md"
+      ],
+      "has_ccos_index": true,
+      "updated_at": "2026-03-03T12:07:27.969504+00:00"
+    },
+    {
+      "path": "CCOS/knowledge/architecture/ccos-governance-dedup-and-daily-automation-v1.md",
+      "id": "arch-ccos-governance-dedup-and-daily-automation-v1-20260303",
+      "domain": "architecture",
+      "tags": [
+        "ccos",
+        "governance",
+        "dedup",
+        "daily-report",
+        "automation",
+        "human-in-the-loop"
+      ],
+      "related": [
+        "../../protocol/p0-rules.md",
+        "../../protocol/ai-playbook.md",
+        "../../protocol/multi-ai-collaboration.md"
+      ],
+      "has_ccos_index": true,
+      "updated_at": "2026-03-03T12:07:20.827435+00:00"
+    },
+    {
+      "path": "CCOS/knowledge/architecture/remote-codex-control-mvp.md",
+      "id": "arch-remote-codex-control-mvp-20260303",
+      "domain": "architecture",
+      "tags": [
+        "remote-control",
+        "codex",
+        "mobile",
+        "web",
+        "mvp"
+      ],
+      "related": [
+        "../../protocol/p0-rules.md",
+        "../decisions/adr-20260303-cloud-control-plane.md"
+      ],
+      "has_ccos_index": true,
+      "updated_at": "2026-03-03T08:19:42.141068+00:00"
+    },
+    {
+      "path": "CCOS/knowledge/business-logic/README.md",
+      "id": "ccos-knowledge-business-logic-readme",
+      "domain": "business-logic",
+      "tags": [
+        "ccos",
+        "business-logic"
+      ],
+      "related": [
+        "../../protocol/p0-rules.md"
+      ],
+      "has_ccos_index": true,
+      "updated_at": "2026-03-03T08:19:42.230727+00:00"
+    },
+    {
+      "path": "CCOS/knowledge/decisions/README.md",
+      "id": "ccos-knowledge-decisions-readme",
+      "domain": "decisions",
+      "tags": [
+        "ccos",
+        "decision",
+        "adr"
+      ],
+      "related": [
+        "../../protocol/p0-rules.md",
+        "adr-20260303-cloud-control-plane.md",
+        "adr-20260303-no-public-ip-access.md"
+      ],
+      "has_ccos_index": true,
+      "updated_at": "2026-03-03T08:19:42.292247+00:00"
+    },
+    {
+      "path": "CCOS/knowledge/decisions/adr-20260303-cloud-control-plane.md",
+      "id": "adr-remote-control-cloud-control-plane-20260303",
+      "domain": "decisions",
+      "tags": [
+        "adr",
+        "remote-control",
+        "codex",
+        "architecture"
+      ],
+      "related": [
+        "../../protocol/p0-rules.md",
+        "../architecture/remote-codex-control-mvp.md"
+      ],
+      "has_ccos_index": true,
+      "updated_at": "2026-03-03T08:19:42.357305+00:00"
+    },
+    {
+      "path": "CCOS/knowledge/decisions/adr-20260303-no-public-ip-access.md",
+      "id": "adr-remote-control-no-public-ip-access-20260303",
+      "domain": "decisions",
+      "tags": [
+        "adr",
+        "network",
+        "tailscale",
+        "remote-control"
+      ],
+      "related": [
+        "../../protocol/p0-rules.md",
+        "../architecture/remote-codex-control-mvp.md"
+      ],
+      "has_ccos_index": true,
+      "updated_at": "2026-03-03T08:19:42.413121+00:00"
+    },
+    {
+      "path": "CCOS/knowledge/patterns/README.md",
+      "id": "ccos-knowledge-patterns-readme",
+      "domain": "patterns",
+      "tags": [
+        "ccos",
+        "patterns"
+      ],
+      "related": [
+        "../../protocol/p0-rules.md"
+      ],
+      "has_ccos_index": true,
+      "updated_at": "2026-03-03T08:19:42.472333+00:00"
+    },
+    {
+      "path": "CCOS/knowledge/rpa/README.md",
+      "id": "ccos-knowledge-rpa-readme",
+      "domain": "rpa",
+      "tags": [
+        "ccos",
+        "rpa"
+      ],
+      "related": [
+        "../../protocol/p0-rules.md"
+      ],
+      "has_ccos_index": true,
+      "updated_at": "2026-03-03T08:19:42.528027+00:00"
+    }
+  ]
+}
