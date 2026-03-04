@@ -5,7 +5,7 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `in_progress`
-- updated_at: `2026-03-03`
+- updated_at: `2026-03-04`
 - updated_by: `ccosctl task checkpoint`
 
 ## 背景
@@ -19,7 +19,7 @@
 
 1. `T12/T13/T14/T18` 已完成，覆盖参数适配、ping 任务、养号映射、适配层单测。
 2. 进入实现优先阶段，待推进 `T11/T19/T15/T16/T17`。
-3. 当前活动任务线仍为该任务（见项目内 `task-index.md` 的 `active_task_id`）。
+3. 当前任务线执行焦点见项目内 `task-index.md`（任务认领）与 `agent-focus.md`（agent 路由）。
 
 ## 下一步
 
@@ -30,3 +30,4 @@
 ## Progress Log
 - 2026-03-03 19:22:39 2026-03-03: T19第二刀完成（author_route_navigation + test_author_route_navigation），app.py转兼容封装；下一步T19第三刀
 - 2026-03-03 19:29:27 2026-03-03: 将 CCOS/context 核心路由文件纳入 Git 管理，补充 p0-rules/ai-playbook 约束
+- 2026-03-04 10:05:15 2026-03-04: execute_flow_package 自动导出默认落到 project_root 上级 tmp/，并补充 cases/*/tmp 忽略规则与API说明

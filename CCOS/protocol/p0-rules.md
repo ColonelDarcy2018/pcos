@@ -2,10 +2,13 @@
 
 本文件定义 CCOS P0 的公共约束，供所有技能和知识文档统一引用。
 
-## 0. Hub 元协议锚点
+## 0. 中枢元协议锚点（Node -> Hub）
 
 ### MUST
-- 本文档继承中枢元协议：`../../meta/ccos-unified-protocol.md`。
+- 本节点协议必须服从 CCOS Hub 元协议：`/Users/zhuxiaowei/ccos/meta/ccos-unified-protocol.md`。
+- 本文件仅定义项目执行层约束，不得与 Hub 元协议冲突；如冲突，以 Hub 元协议为准。
+- 在项目目录发起任务时，仍必须按 Hub 三字段治理（`project_id/repo_root/ccos_node`）回写 `~/ccos/capture/tasklines/**`。
+
 
 ## 1. 资产分区
 
@@ -78,24 +81,33 @@ python3 CCOS/scripts/ccos_p0.py sync
 
 ### MUST
 - 当用户明确提出“保存当前状态/生成会话摘要/下次继续/续做上次任务”时，必须更新：
-  - `CCOS/context/current-task.md`
   - `CCOS/context/task-index.md`
+  - `CCOS/context/agent-focus.md`
   - `CCOS/context/task-{任务ID}.md`（受影响任务）
   - `CCOS/context/session-{YYYYMMDD}-{n}.md`
-  - `CCOS/context/session-latest.md`
+  - `CCOS/context/session-latest.md`（兼容模式，可选）
+- 核心任务路由文件必须纳入 Git 可追踪治理（不得被 `.gitignore` 忽略）：
+  - `CCOS/context/task-index.md`
+  - `CCOS/context/agent-focus.md`
+  - `CCOS/context/task-{任务ID}.md`
+  - `CCOS/context/session-latest.md`（兼容模式，可选）
+  - `CCOS/context/agent-registry.md`
+  - `CCOS/context/file-locks.md`
+  - `CCOS/context/conflict-log.md`
 
 ### SHOULD
-- 对于跨轮次、长链路的研发任务，在阶段性里程碑结束时同步一次 `current-task.md`，降低上下文断层风险。
+- 对于跨轮次、长链路的研发任务，在阶段性里程碑结束时同步一次 `task-index.md` 与 `agent-focus.md`，降低上下文断层风险。
 
 ## 8. 多任务并行模式
 
 ### MUST
-- 当存在 2 条及以上任务线时，`current-task.md` 仅作为“活动任务路由器”，不承载单任务完整正文。
+- 当存在 2 条及以上任务线时，不再使用全局单指针 `current-task.md` 作为路由源。
+- 全局任务状态以 `task-index.md` 为准；每个 agent 的当前焦点以 `agent-focus.md` 为准。
 - 每条任务线必须独立维护 `CCOS/context/task-{任务ID}.md`，禁止用新任务内容覆盖旧任务文件。
 - 任务切换时必须同步更新：
-  - `CCOS/context/current-task.md`（active_task）
   - `CCOS/context/task-index.md`（状态与优先级）
-  - `CCOS/context/session-latest.md`（最近会话指针）
+  - `CCOS/context/agent-focus.md`（agent -> task 路由）
+  - `CCOS/context/session-latest.md`（兼容模式，可选）
 
 ### SHOULD
 - 对“等待用户决策”的任务，保留明确的 `待确认问题`，便于后续快速恢复。
@@ -114,3 +126,17 @@ python3 CCOS/scripts/ccos_p0.py sync
 ### SHOULD
 - 建议采用“一任务一分支”策略（`task/<task_id>/<agent_id>`）。
 - 建议每 5-15 分钟更新一次租约心跳，降低误接管。
+
+## 10. 文档写作规范（面向非对话读者）
+
+### MUST
+- 知识文档必须能被“不了解对话过程的读者”直接理解和执行。
+- 禁止在知识文档中出现对话过程性表述，如“本轮/本版按你确认/按你评审意见/你已确认”等。
+- 过程性说明、协作备注、临时判断应写入 `CCOS/context/**`，不写入 `CCOS/knowledge/**`。
+- 同一主题文档迭代时，优先在原文档内维护“版本变更记录表”，避免因会话过程反复复制多份同类文档。
+- 文档迭代必须采用“最小必要修改”原则；对未被明确要求且仍有效的内容，不得随意删除。
+- 如确需删除既有内容，必须在“版本变更记录表”明确记录删除项与删除原因。
+
+### SHOULD
+- 版本变更记录建议至少包含：`版本`、`日期`、`变更摘要`。
+- 对外契约文档应优先使用“规则/约束/字段定义/示例”结构，降低理解成本和 token 消耗。

@@ -30,6 +30,13 @@
 4. 跨项目摘要必须回写 `~/ccos/capture/tasklines/**`。
 5. 联邦索引与联邦日报由 `~/ccos` 侧脚本生成。
 
+## 并发路由模型（MUST）
+
+1. Node 并发模式禁止依赖单一 `current-task.md` 作为全局活动任务指针。
+2. Node 任务状态统一写入 `task-index.md`；agent 视角路由统一写入 `agent-focus.md`。
+3. Hub 侧任务线索引仅维护“任务线状态与摘要”，不维护 Node 的单会话活动指针。
+4. 任务切换时以“任务认领（task-index）+ agent 焦点（agent-focus）+ 锁表（file-locks）”三件套为原子更新单元。
+
 ## 任务线命名约定（MUST）
 
 1. Hub 任务线 `taskline_id` 统一格式：`project_id/ccos_node/task_slug`。

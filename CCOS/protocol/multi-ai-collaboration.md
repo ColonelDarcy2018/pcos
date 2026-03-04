@@ -17,6 +17,11 @@
 - `lease_until`
 - `last_heartbeat`
 
+并发路由要求（MUST）：
+
+1. 同步维护 `CCOS/context/agent-focus.md`，以 `agent_id -> focus_task_id` 做路由。
+2. 不使用 `current-task.md` 作为并发场景的全局单指针路由源。
+
 ## 2. 任务认领（Task Claim）
 
 开始执行前必须先认领任务，在 `CCOS/context/task-index.md` 更新：
@@ -31,6 +36,7 @@
 1. 已被其他 agent 认领且租约未过期，不得抢占。
 2. 仅允许用户明确指令覆盖认领关系。
 3. 租约过期可由其他 agent 接管，并记录接管原因。
+4. `task-index.md` 禁止维护全局 `active_task_id`，仅维护任务清单与 owner/lease。
 
 ## 3. 文件锁（File Lock）
 
@@ -46,6 +52,11 @@
 - `lease_until`
 - `note`
 
+格式约束（MUST）：
+
+1. 一条记录只允许一个 `path`；禁止把多个路径拼在单行里。
+2. 目录路径与文件路径都可加锁，但目录锁必须写清子树边界（例如 `project/videohao/`）。
+
 规则：
 
 1. `write` 锁互斥；存在有效 `write` 锁时其他 agent 不能写同一文件。
@@ -58,6 +69,7 @@
 
 - `agent-registry.md` 的 `last_heartbeat`
 - `task-index.md` 的 `lease_until`
+- `agent-focus.md` 的 `updated_at`（当焦点任务切换时）
 
 建议心跳间隔：5-15 分钟。超过租约时间未续租视为可接管。
 
@@ -97,5 +109,5 @@
 
 1. 释放 `file-locks.md` 中对应锁。
 2. 更新 `task-index.md` 任务状态与 owner。
-3. 在 `session-latest.md` 记录当前可接手入口。
-
+3. 更新 `agent-focus.md`（标记 `idle` 或切换到新任务）。
+4. 在 `session-latest.md` 记录当前可接手入口（兼容模式，可选）。
