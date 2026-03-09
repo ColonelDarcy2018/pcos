@@ -5,7 +5,7 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `in_progress`
-- updated_at: `2026-03-09 12:09 +0800`
+- updated_at: `2026-03-09 20:12 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -17,23 +17,28 @@
 
 ## 当前进展（同步摘要）
 
-1. `T11/T15/T16` 已进入“闭环验证 + 收口”阶段，当前主线以视频号 `1x` 与 mock 回传/证据链为优先。
-2. `s2` 上已完成两条视频号 `1x` 主线 loopback mock 闭环：
-   - 单 `actType=13`：`job_id=http_pkg_20260308_152546_576429_8465a405`；
-   - 组合 `11+13+14`：`job_id=http_pkg_20260308_152845_744838_21ad9abf`。
-3. `s2` 的 PC-hosted mock 已补回成功样例；当前建议调整为“PC-hosted mock 优先，设备 loopback 兜底”。
-4. `s1` 上已用正式 `app.py` 入口再次下发视频号 `actType=13`，并明确当前外部 `scanLimit` 会映射为 `comment_count`，未显式传入时 `video_count` 默认取 `10`。
-5. 已新增 `human_test/videohao_act13_like_probe.py` 单文件探针，用于绕开主线直接验证正式 `task_like_data` 链路，支持外部 act13 / 内部 `dianzan` / kwargs 三种入参口径。
-6. 已按分层原则完成通用沉淀：selector 唯一性校验、列表容器根节点判定、`project/human_test/**` 单文件 probe 规范，以及 util sdk 新增“数量/唯一性” helper；项目文档仅保留视频号 `21` 时序与评论页 `depth(6)` 等专属残差。
-7. 当前剩余主收口项已收缩为：combo act 细粒度缓存更新、通用分组策略抽象，以及 `21/3x` 的后续真机闭环。
+1. 安装/升级固定链路已平台化：`rpa-dev-platform` 新增 `/api/devices/{serial}/install-apk` 与 `/api/devices/{serial}/prepare`，统一收口亮屏、解锁、HTTP readiness、无障碍与悬浮按钮恢复。
+2. Android 运行时已补 `/api/platform_state`、`/api/platform_prepare`，`s2` 实机升级安装后已返回 `prepared=true`。
+3. `execution_status` 与 `execution_logs` 的手动停止口径已统一到 `32/手动停止/任务被手动停止`；对客回调继续保持 `50012`。
+4. 新 `13-20` 测试文档矩阵已成为默认真机回归基线，`s2` 上已完成一轮按矩阵执行的 `4.1 ping / 4.4 control / 2x / 3x / 4x` 联调记录，长结果统一索引到 `21-视频号与任务控制接口新一轮真机联调运行记录索引-v1.md`。
+5. 本轮真机结论已沉淀：`VH21-COMMENTS` 通过；`VH21-POSTS` 暴露筛选锚点问题；`VH21-FULL` 命中 `NoneType.child`；`VH41` activity 漂移；`VH31+32` 仍受 `HUMAN_PICK_REQUIRED` 阻塞。
+6. mock readiness / SOP / 诊断树已落文档，PC-hosted mock 失败且 PC 无访问日志时可直接切 loopback mock。
+7. 通用框架已新增 `actResult.snapshot`：每个 act 完成后尝试截图并上传，截图前/后固定延迟 `0.5s/2s`，combo 本地执行器优先在 act 边界回填。
+8. `rpa-dev-platform` 已新增通用执行预检：执行前自动 reconnect/拉起塔斯、宿主机 URL 探活、从 `input_params` 自动提取 `localhost/127.0.0.1` 端口并执行 `adb reverse`；mock 启动与业务样本前置条件仍保留在流程域。
 
 ## 下一步
 
-1. Backbone：基于当前 `s2 + mock` 基线继续补齐视频号 `1x` 其余单 act 的主线样例与证据。
-2. Backbone：再恢复 `21/3x` 真机闭环与组合执行验证。
-3. Delta：等待用户审核本轮分层沉淀；若通过，再继续把阶段信号、评论进度缓存等能力沉淀到开发平台与主线回调契约。
+1. Backbone：继续基于已升级运行时和正式 `project/app.py` 修复 `21` 的筛选锚点 / 空节点问题，并复跑 `2x` 主链路。
+2. Backbone：补齐 `41` 页面态漂移与 `31/32` human-pick 阻塞的定向修复，再按新矩阵复测。
+3. Delta：将项目侧 runner / 模板接入通用执行预检参数，同时保持 mock 启动与业务样本准备继续沉淀在流程域 SOP。
 
 ## Progress Log
+- 2026-03-09 20:12 +0800 已同步新测试矩阵真机结果与通用执行预检沉淀：`4.4/4.1/2x/3x/4x` 结果已入库，平台层现可自动 reconnect/拉起塔斯/host preflight/localhost adb reverse
+- 2026-03-09 18:10 +0800 已同步 act 级截图字段、固定截图延迟策略与 combo observer 单测结论
+- 2026-03-09 18:20 +0800 已完成 act 级截图定向验证与 CCOS 规范校验，当前可进入主仓提交；后续仅待补一条真机 mock/OSS 样例
+- 2026-03-09 18:44 +0800 已从源 `.docx` 抽取 46 条视频号测试用例，并补齐 `13-20` 文档矩阵；当前未实现/需人工锁前置的场景已统一沉淀到待人工处理清单
+- 2026-03-09 16:59 +0800 已同步安装升级平台化链路、stop 查询统一口径、正式 `21`/stop 复测与 mock SOP 文档
+- 2026-03-09 12:30 +0800 已同步 `21` 的 PC-hosted mock 成功闭环、评论迭代 stop 阻塞与 `s2` stop 运行时版本不一致结论
 - 2026-03-03 19:22:39 2026-03-03: T19第二刀完成（author_route_navigation + test_author_route_navigation），app.py转兼容封装；下一步T19第三刀
 - 2026-03-03 19:29:27 2026-03-03: 将 CCOS/context 核心路由文件纳入 Git 管理，补充 p0-rules/ai-playbook 约束
 - 2026-03-04 10:05:15 2026-03-04: execute_flow_package 自动导出默认落到 project_root 上级 tmp/，并补充 cases/*/tmp 忽略规则与API说明
