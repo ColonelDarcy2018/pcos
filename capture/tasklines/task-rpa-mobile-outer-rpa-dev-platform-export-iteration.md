@@ -5,7 +5,7 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `in_progress`
-- updated_at: `2026-03-08`
+- updated_at: `2026-03-11`
 
 ## 背景
 
@@ -24,10 +24,26 @@
 6. 真机已验证设备端新路由返回 JSON，daemon 可按 `job_id` 拿到结束状态与失败/成功日志。
 7. 当前进入 `T10` v2 收口阶段：继续处理环境前置提示、多设备隔离回归与协作协议细化。
 8. Node 并发路由已迁移为 `task-index + agent-focus`，后续认领/切换按新口径执行。
+9. 新增并完成两项高优先级需求：`export_flow_package` 默认导出目录统一收口到案例根 `output/`，插件导出对话框默认定位到该目录；新增 `project/test/**` 本地测试目录约定，并在流程包导出时自动忽略。
+10. 已完成“历史执行日志查询”扩展：Android/ObjectBox 新增最近一次运行日志与按开始时间查询日志接口，daemon 改为优先走设备端历史记录并在不可用时回退本地索引；Trae 扩展新增对应 UI 命令。
 
 ## 下一步
 
-1. 继续推进 `T10` v2：补齐悬浮按钮前置条件提示/自动拉起、拾取回填校验和 selector 优先级规则。
-2. 补多设备并行下的 `job_id` 状态/日志隔离回归，确认不同设备执行记录互不串台。
+1. 补一次真机回归：覆盖“最近一次运行日志”“按开始时间查询日志”“命中运行中任务后切换实时追踪”三条用户链路。
+2. 继续推进 `T10` v2：补齐悬浮按钮前置条件提示/自动拉起、拾取回填校验和 selector 优先级规则。
 3. 补齐 Java 中转服务协议细节后，再重启 `T8/T9` 双通道整合。
 4. 持续本地 ADB 链路回归验证，避免后续远程改造引入退化。
+5. 跟进 `project/test/**` 新标准在更多案例上的迁移策略，避免与现有 `project/tests/**` 设备端测试混淆。
+
+
+## 残差更新（2026-03-11）
+
+Backbone（保持不变）:
+1. 开发平台继续以“设备端 ObjectBox 干净日志优先，`adb logcat` 兜底”作为执行可观测性主链路。
+2. 插件/daemon 仍要求先绑定唯一 `device_serial`，日志、停止、截图与分析等操作都围绕该设备展开。
+3. 历史 `get_execution_status` / `get_execution_logs` 按唯一 `job_id` 查询的链路保持兼容，不回退已有调用方式。
+
+Delta（本轮新增）:
+1. Android `HttpServer/BaseHttpServer` 新增 `/api/job_logs_latest` 与 `/api/job_logs_by_start_time`，并通过 ObjectBox 支持跨 daemon 重启后的历史运行日志查询。
+2. daemon 新增 `get_latest_execution_logs` / `get_execution_logs_by_start_time` 的 HTTP + MCP 能力，且优先走设备端历史接口；仅当设备端能力不可用时才退回本地运行索引。
+3. Trae 扩展新增“查看最近一次运行日志”“按开始时间查看日志”命令，设备树右键可直接触发，并支持命中运行中任务后切换到实时追踪。
