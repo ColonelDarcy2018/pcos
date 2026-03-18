@@ -4,8 +4,8 @@
 - project_id: `rpa-mobile`
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
-- status: `planned`
-- updated_at: `2026-03-12 12:26 +0800`
+- status: `active`
+- updated_at: `2026-03-18 13:20 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -20,17 +20,18 @@
 
 ## 当前同步结论（摘要）
 
-1. 已冻结关键结论：仅靠塔斯 App 自身、且不借助 adb/root，无法承诺“系统显示已授权时一定能 100% 自动重新绑定无障碍服务”；真实 bind/unbind 生命周期仍由 Android 系统管理。
-2. 已冻结推荐方案：显式拆分 `accessibilitySettingEnabled`、`accessibilityServiceBound`、`accessibilityServiceHealthy` 三类状态，并把元素拾取、悬浮窗、脚本执行、平台预热统一接入“先自愈、后人工修复”的状态机。
-3. 已冻结兜底方案：当多轮自愈失败时，App 必须进入一致性断开态；若服务实例仍存活，可评估先调用 `disableSelf()` 再引导用户重授权；若实例已为空，则只能清空 App 可用态并引导用户手动修复系统权限。
-4. 已同步预热约束：文件读取权限、获取应用列表权限、开发者模式、悬浮窗权限与悬浮窗显示状态仍纳入统一 gate；其中“悬浮窗打开前先确认悬浮窗权限”在现有代码中已具备基础实现。
-5. 已记录真实故障证据：`s2` 在 `2026-03-12 11:38` 左右出现 `captureCurrentWindow: service = null`，但系统设置仍显示塔斯无障碍已授权；到 `11:39`-`11:40` 之间重新授权后才恢复 `onServiceConnected()`。
+1. 已完成 `ACC-01` Android 落地：`AccessibilityService`、`AccessibilityServiceTool`、`SettingsHandler`、`RpaPyJob`、`RpaEngine` 等关键入口已统一使用 setting/bound/healthy 三态。
+2. `readyForRpa` 与平台预热已切到真实无障碍健康态；“系统设置已勾选”不再单独代表可执行态，且平台状态已补充 `manualRepairRequired`、`healthReason` 与最近连接/事件/root 时间。
+3. 已完成关键入口错误码收口：当前能明确区分“无障碍未授权”和“已授权但未运行”，避免再次把两类问题混为一谈。
+4. 已完成定向验证：`android` 子仓执行 `./gradlew :app:compileOriginDebugJavaWithJavac` 成功。
+5. 已记录外部阻塞：仓库约定检查失败点来自既有测试文件 `examples/mobile-rpa-cases/cases/xp-wx1-simplified/project/tests/test_videohao_executor.py` 缺少 `main(zbot, *args, **kwargs)`，非本任务改动引入，仍需单独处理。
 
 ## 下一步
 
-1. 先按 `ACC-01/ACC-02` 冻结状态模型与自愈状态机，避免先改入口导致语义再次分叉。
-2. 再按 `ACC-03/ACC-04` 统一接入 `SettingsHandler`、`RpaEngine`、`ElementHandler`、`FloatyWindowHandler`，并补齐一致性断开态。
-3. 最后执行 `ACC-05/ACC-06`，把预热 gate 与真机验收矩阵统一收口，确保后续 AI 能直接照文档推进实现与验证。
+1. 下一步优先推进 `ACC-02`：补齐短窗口恢复、退避重试、健康心跳与 watchdog。
+2. 然后推进 `ACC-03/ACC-04`：把剩余入口统一接入状态机，并补齐一致性断开态与人工修复提示。
+3. 最后执行 `ACC-05/ACC-06`：统一预热 gate、日志 tag 与真机验收矩阵。
 
 ## Progress Log
 - 2026-03-12 12:26 +0800 已创建塔斯 App 无障碍稳定性与自动重连任务线，并同步项目内任务文档、知识基线与状态机图；冻结“app-only 不能保证 100% 自动重绑，但必须做到双态建模、自愈优先、一致性断开态兜底”的实现方向
+- 2026-03-18 13:20 +0800 已完成 `ACC-01` Android 实现并同步任务线：无障碍状态已拆成 setting/bound/healthy，平台态与关键入口已切到真实运行态；`android` 子仓 `originDebug` 编译通过，仓库约定检查仅剩外部既有测试文件阻塞
