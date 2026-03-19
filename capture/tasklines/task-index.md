@@ -3,7 +3,7 @@
 > 说明：本文件是跨项目任务路由入口，项目内细节请链接到对应项目 `CCOS/context/task-*.md`。
 > 并发模式下，Node 路由使用 `task-index + agent-focus`，Hub 不维护 `current-task`。
 
-- updated_at: 2026-03-12 12:26 +0800
+- updated_at: 2026-03-19 11:09 +0800
 
 | taskline_id | 标题 | 状态 | 优先级 | project_id | ccos_node | 任务文档 | 来源 CCOS |
 |---|---|---|---|---|---|---|---|
@@ -12,6 +12,7 @@
 | `rpa-mobile/outer/xpeng-unified-framework-phase1` | 小鹏汽车项目通用流程框架 Phase 1 | `in_progress` | `P0` | `rpa-mobile` | `outer` | `task-rpa-mobile-outer-xpeng-unified-framework-phase1.md` | `apps/rpa-mobile/CCOS` |
 | `rpa-mobile/outer/xpeng-videohao-human-pick-phase1` | 小鹏视频号人类拾取与实现策略确认 Phase 1 | `in_progress` | `P0` | `rpa-mobile` | `outer` | `task-rpa-mobile-outer-xpeng-videohao-human-pick-phase1.md` | `apps/rpa-mobile/CCOS` |
 | `rpa-mobile/outer/xpeng-gongzhonghao-phase1` | 小鹏公众号任务实现 Phase 1 | `in_progress` | `P0` | `rpa-mobile` | `outer` | `task-rpa-mobile-outer-xpeng-gongzhonghao-phase1.md` | `apps/rpa-mobile/CCOS` |
+| `rpa-mobile/outer/xpeng-stable-baseline` | 小鹏稳定基线任务线 | `in_progress` | `P0` | `rpa-mobile` | `outer` | `task-rpa-mobile-outer-xpeng-stable-baseline.md` | `apps/rpa-mobile/CCOS` |
 | `rpa-mobile/outer/rpa-dev-platform-export-iteration` | RPA 开发平台导出流程包能力迭代 | `in_progress` | `P1` | `rpa-mobile` | `outer` | `task-rpa-mobile-outer-rpa-dev-platform-export-iteration.md` | `apps/rpa-mobile/CCOS` |
 | `wanling-tower/default/gameplay` | 万灵塔玩法重基线推进 | `in_progress` | `P1` | `wanling-tower` | `default` | `待创建` | `apps/game_demo/wanling-tower/CCOS` |
 | `myth-td-prototype/default/immersion` | myth-td 沉浸感迭代 | `in_progress` | `P1` | `myth-td-prototype` | `default` | `待创建` | `apps/game_demo/myth-td-prototype/CCOS` |
