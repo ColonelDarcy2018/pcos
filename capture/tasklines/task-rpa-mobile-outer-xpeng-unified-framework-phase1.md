@@ -5,7 +5,7 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `in_progress`
-- updated_at: `2026-03-11 19:20 +0800`
+- updated_at: `2026-03-24 18:08 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -31,14 +31,21 @@
 12. 小鹏接口签名已固定为“每次请求单独实时计算”，默认直接使用硬编码 `szzn / dscsdfuq34cdfesrpde`；`STS -> OSS PUT -> callback` 三段请求都按同一签名逻辑运行。
 13. callback 成功态默认不再传 `failReason`；顶层与 `actResultList[].snapshot` 均返回完整 OSS 可访问 URL，不再回本机路径或去 query 的 PUT URL。
 14. `s2` 真机探针 `http_pkg_20260311_190143_080525_f77ec1e4` 已通过，日志确认 `sts_response code=200`、`oss_put_response status_code=200`、`callback_response code=200`。
+15. `14-20` 子文档已按残差结构各补 1 条 `爱吃波客` 定向 case：`41/21/3x/1x` 直接回填 `2026-03-12` mock 元数据与通过记录，`51/4.1/4.4` 也已冻结待补跑样例，原 `小鹏汽车` 样例保持不删。
+16. `xp-wx1-simplified` 已新增微信登录页统一守卫：导航阶段命中 `LoginVoiceUI` 直接返回“账号已掉线”；最终失败且非手动停止时，若结束前仍停在微信登录页，则统一覆盖顶层与 `actResultList` 的失败归因为账号掉线。
+17. 项目内 `wechat_navigator.py` 与 `rpa-dev-platform` 的 `wechat_navigator_sdk.py` 已同步登录页前置守卫，平台导出的导航器快照也已保持一致。
 
 ## 下一步
 
 1. Backbone：继续基于当前正式代码回归真实 `21/31/32/41/51` 任务，重点看真实业务数据、评论阶段信号与页面态漂移。
 2. Backbone：后续凡涉及小鹏接口调用，统一保持“按请求实时签名 + 高重试 + HTTP trace”口径，不再引入共享鉴权缓存。
 3. Delta：待正式版链路继续稳定后，再决定是否把 shared contract / snapshot 稳定性能力有选择地迁到 `simplified`。
+4. Delta：后续若继续补跑文档矩阵，优先复用已冻结的 `爱吃波客 / sphkEaNwwJj1TZH` 基线，先完成 `51 / 4.1 / 4.4` 三条新增用例的执行记录收口。
+5. Delta：当前微信登录页识别仍只覆盖 `LoginVoiceUI`，后续若微信版本扩展登录 Activity，再按真实日志补充识别表。
 
 ## Progress Log
+- 2026-03-24 18:08 +0800 已同步微信登录页守卫：`xp-wx1-simplified` 新增统一 helper，导航阶段命中 `LoginVoiceUI` 直接返回“账号已掉线”；最终失败且非手动停止时会在回传前统一覆盖顶层与 act 级失败归因为账号掉线；项目导航器与 `rpa-dev-platform` SDK 已同步同一口径
+- 2026-03-12 16:27 +0800 已同步 dispatch-integration `14-20` 子文档残差增量：每个子文档都新增 1 条 `爱吃波客` 定向 case，并把 `41/21/3x/1x` 的 mock 元数据与通过记录回写到矩阵文档；`51/4.1/4.4` 待后续补跑
 - 2026-03-11 19:20 +0800 已同步 shared DTO contract、按请求实时签名、成功态省略 `failReason`、完整 OSS 快照 URL 与截图稳定性修复；`s2` 真机探针 `http_pkg_20260311_190143_080525_f77ec1e4` 已确认 `STS -> OSS PUT -> callback` 三段全部 200
 - 2026-03-10 21:12 +0800 已同步历史附件清理：`1_小鹏项目视频号测试用例.docx` 已删除，`13/22` 与项目上下文已切换到“仅保留当前主附件”的说明口径
 - 2026-03-10 20:54 +0800 已同步调度文档任务线：`04` 父文档命名冻结、`14-20` 子文档结构化、`rpaType/platform/targetTile` 口径统一、`21` 筛选枚举更正到正式值，并新增 AI 标准链路文档与执行记录模板；同时已清理历史测试夹具中的旧枚举 `最近7天`
