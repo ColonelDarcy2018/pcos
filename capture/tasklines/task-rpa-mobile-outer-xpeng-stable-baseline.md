@@ -5,7 +5,7 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `in_progress`
-- updated_at: `2026-03-20 02:08 +0800`
+- updated_at: `2026-04-01 18:10 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -45,6 +45,7 @@
 4. 若补跑 AI 标准链路或 OpenAPI 文档样例，默认先从 `41 -> 21 -> 3x -> 1x` 的 `爱吃波客` 稳定基线取数，再决定是否回切 `小鹏汽车` 对照样本。
 
 ## Progress Log
+- 2026-04-01 18:10 +0800 已完成视频号 `41` 评论页发布时间解析修复：`115 / ONYX9X4PZ5FY7LPZ` 上先复现到 `release_time=未知`，确认评论页头部真实文案为 `北京 2025年12月25日`；随后补齐 `YYYY年M月D日` 解析与测试后，再次用 `115` 真机回归，日志已命中“头部文案兜底解析命中：release_time='2025年12月25日'”，并按 `pubTimeGe=2026-03-29 11:00:00` 正常跳过旧视频，最终 callback 成功（`status=1/failReason=0`）。同时补记一条平台排障坑点：本地 daemon / MCP 若继承代理环境，localhost 流程包执行可能报 `socksio` 缺失，需先清理代理变量再做本机联调。
 - 2026-03-20 02:08 +0800 已把“内部收口重构”方案同步进任务线：当前只修复了 `1x/3x` planning 层的单 act / combo 规划语义，并新增统一 family 选路 helper；executor 内部 `single/combo` 统一执行器方案已冻结为 `SB-19`，明确后续按 `1x/3x` 两个族级核心执行器推进，当前暂未实现
 - 2026-03-19 11:09 +0800 已完成 `task_payload.callbackUrl` 规则收口：本地 `127.0.0.1/localhost` 时 simplified 直接回调 mock、不再双发 XP 正式 callback；未传时继续走正式 XP callback；显式非本地地址按参数错误处理。相关代码、测试、mock README、标准链路与回归用例文档已同步，且本地回归与 `check_rpa_device_test_convention.py` 已通过
 - 2026-03-17 23:17 +0800 已把“未命中目标视频/评论细节失败提示”的后续方案冻结到稳定基线任务线：视频侧拟补标题/发布时间两类诊断采样，评论侧拟补文本/作者两类失配摘要；当前先记任务，不在本轮实现
