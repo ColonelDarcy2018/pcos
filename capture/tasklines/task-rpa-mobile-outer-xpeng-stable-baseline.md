@@ -5,7 +5,7 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `in_progress`
-- updated_at: `2026-04-01 18:10 +0800`
+- updated_at: `2026-04-08 12:08 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -36,6 +36,7 @@
 17. `SB-17`：新增一份 dispatch-integration 标准风格的回归测试用例文档，覆盖采集类采完即停、`1x/3x` 单目标搜索/多目标迭代、关键成功截图与 `51` 成功截图；当前落盘路径为 `CCOS/knowledge/business-logic/xpeng-project/dispatch-integration/25-视频号退出时机与关键成功截图回归测试用例-v1.md`。
 18. `SB-18`：补齐未命中目标视频/评论的细节失败提示；视频侧需区分“标题不匹配”与“标题命中但发布时间不匹配”，评论侧需区分“评论文本不匹配”与“评论作者不匹配”，并在最终失败信息中附有限样例与已扫描计数。当前先冻结方案，不在本轮实现。
 19. `SB-19`：执行层内部收口 `single/combo` 两套入口；后续按任务族收口为两个内部核心执行器，分别覆盖 `1x` 与 `3x`，`single/combo` 仅保留为 planning 与 act 结果绑定元数据。当前方案已冻结，尚未实现。
+20. `SB-20`：视频号非养号任务的 task 级通用风控升级；风控等级支持 `riskLevel=1/2/3`，调度标准参数固定走 `extraParams.riskLevel`，缺省按 `1`，仅对非养号视频号任务生效；在第一次进入视频号播放页后、所有 act 前执行前置风控，在所有 act 结束并回到视频播放页后、最终 callback 前执行后置风控；动作当前只保留“刷视频 / 点赞视频 / 喜欢视频”，且前后总时长需受该等级预算约束。`actType=51` 明确忽略该字段，并移除养号内部旧的前后刷视频壳；公众号任务不接入本轮通用风控。当前代码与单测已完成，待 `s2` 真机回归确认。
 
 ## 下一步
 
@@ -43,9 +44,13 @@
 2. 实施期间保持已稳定的 callback/STS/OSS/signature/retry 链路不变，避免把“结果结构收口”与“网络稳定性改造”混成一轮。
 3. 若后续要继续收口公众号或正式版，再基于该任务线新增子需求，不直接覆盖当前冻结方案。
 4. 若补跑 AI 标准链路或 OpenAPI 文档样例，默认先从 `41 -> 21 -> 3x -> 1x` 的 `爱吃波客` 稳定基线取数，再决定是否回切 `小鹏汽车` 对照样本。
+5. `SB-20` 当前代码已落地，下一步优先补 `s2` 真机专项回归：覆盖 `21/41/3x/1x/51` 与公众号 smoke，确认前后风控时机、真实页面动作、总停留时长与最终 callback 顺序符合冻结口径。
 
 ## Progress Log
+- 2026-04-08 12:08 +0800 已完成一轮“云端 `workUuid` -> 真机复核 -> 代码修复”的视频号标题排障闭环：针对运营平台失败样本 `workUuid=edc8a0b36c8b1c3c33a1d1ad534c81a3`，先通过新增的云端 engine log 分析能力确认 portal 侧 `targetTitle` 仅保留为截断值 `#95后小鹏店长\n#小鹏汽…`；随后在 `s2(WKDAUGWGEA75KRCM)` 上用诊断包 `XP_VH_DIAG_20260408_C / job_id=mcppkg_20260408_110147_824014_a432c843` 真机复测，确认作者页迭代兜底实际上已经扫描到第 `4` 个候选视频 `#95后小鹏店长\n#小鹏汽车…`，但旧版 `_is_target_video_title_match(...)` 因“当前标题带省略号但前缀未命中时提前 `return False`”而没有继续评估“目标标题也带省略号”的对称分支，最终误判为“未命中目标视频”。本轮已修复该提前返回问题，并补 `test_target_video_title_match_accepts_both_truncated_same_prefix` 回归保护。同时把一条稳定认知冻结到任务线：微信作者页内搜索首个结果存在 App 侧模糊匹配，不能把首条卡片标题反推成真实目标视频标题；诊断 `3x/31/32` 视频未命中问题时，应优先以播放页真实标题和迭代日志为证据，而不是以搜索首条结果做结论。
 - 2026-04-01 18:10 +0800 已完成视频号 `41` 评论页发布时间解析修复：`115 / ONYX9X4PZ5FY7LPZ` 上先复现到 `release_time=未知`，确认评论页头部真实文案为 `北京 2025年12月25日`；随后补齐 `YYYY年M月D日` 解析与测试后，再次用 `115` 真机回归，日志已命中“头部文案兜底解析命中：release_time='2025年12月25日'”，并按 `pubTimeGe=2026-03-29 11:00:00` 正常跳过旧视频，最终 callback 成功（`status=1/failReason=0`）。同时补记一条平台排障坑点：本地 daemon / MCP 若继承代理环境，localhost 流程包执行可能报 `socksio` 缺失，需先清理代理变量再做本机联调。
+- 2026-03-27 18:25 +0800 已同步 `SB-20` 风控参数口径收敛：删除旧顶层 `riskLevel` 读取与文档兼容描述，调度标准结构固定为 `extraParams.riskLevel`；`xp-wx1-simplified` 执行层、风控单测、稳定基线文档与视频号测试元文档均已同步，且 `test_execution_risk_control.py`、`test_videohao_risk_control.py` 与 `check_rpa_device_test_convention.py` 已通过
+- 2026-03-23 21:18 +0800 已同步 `SB-20`：非养号视频号任务的 task 级通用风控已落代码，风控等级支持 `riskLevel=1/2/3`（缺省按 `1`），在视频号播放页执行“前置风控 + 后置风控”，当前动作只保留“刷视频 / 点赞视频 / 喜欢视频”；`actType=51` 已明确忽略 `riskLevel` 并移除内部旧的前后刷视频壳；公众号任务显式跳过本轮通用风控。对应代码提交为 `39fd420 feat(videohao): add common risk control wrapper`，本地保护含 `test_execution_risk_control.py / test_videohao_risk_control.py` 与既有回归已通过，当前待 `s2` 真机回归确认 `21/41/3x/1x/51` 与公众号 smoke
 - 2026-03-20 02:08 +0800 已把“内部收口重构”方案同步进任务线：当前只修复了 `1x/3x` planning 层的单 act / combo 规划语义，并新增统一 family 选路 helper；executor 内部 `single/combo` 统一执行器方案已冻结为 `SB-19`，明确后续按 `1x/3x` 两个族级核心执行器推进，当前暂未实现
 - 2026-03-19 11:09 +0800 已完成 `task_payload.callbackUrl` 规则收口：本地 `127.0.0.1/localhost` 时 simplified 直接回调 mock、不再双发 XP 正式 callback；未传时继续走正式 XP callback；显式非本地地址按参数错误处理。相关代码、测试、mock README、标准链路与回归用例文档已同步，且本地回归与 `check_rpa_device_test_convention.py` 已通过
 - 2026-03-17 23:17 +0800 已把“未命中目标视频/评论细节失败提示”的后续方案冻结到稳定基线任务线：视频侧拟补标题/发布时间两类诊断采样，评论侧拟补文本/作者两类失配摘要；当前先记任务，不在本轮实现
