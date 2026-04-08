@@ -5,7 +5,7 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `active`
-- updated_at: `2026-04-08 00:08 +0800`
+- updated_at: `2026-04-08 11:35 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -31,6 +31,7 @@
 8. 异步心跳和 engine log 现在都具备 durable 回放：普通异步上报默认会落 `PersistentReportStore`，日志批次会落 `PersistentEngineLogStore` 并在后续轮询 replay。
 9. 通用包默认口径仍以 `origin` flavor 的通用 `originRelease` 为主，除非特别指定不切 `portal` 包。
 10. `s2 / WKDAUGWGEA75KRCM` 已安装通用 `originRelease 2.1.4`（`buildTime=260407_2239`），并完成 release 安装预热、commander 状态查询与杀进程后恢复回归。
+11. `/api/platform_commander_state` 已继续补齐 durable replay 摘要：结果/引擎日志 pending 数量、最近错误、关键任务标识与最近/下次尝试时间现已对外可见，可直接给主机侧诊断包和离线分析脚本消费。
 
 ## 真机验证证据
 
@@ -54,10 +55,11 @@
 1. 继续补齐“脚本执行上下文级”的恢复能力；当前已能恢复 commander 会话与安全收尾，但还不能让运行中的 Python 任务真正断点续跑。
 2. 在 `CONTROL / DOWNLOAD` 客户端拆分的基础上，继续把重试退避和 jitter 做 profile 级细分，避免两类流量仍沿用同一套线性 backoff。
 3. 扩展非重试错误分类，把参数非法、资源不存在、流程包元数据非法等终态进一步收口成 `origin/portal` 共用的统一错误码策略。
-4. 评估是否要给 commander debug 状态接口增加 durable pending 数量、最近 replay 时间和最近失败原因，降低真机排障门槛。
+4. 继续评估是否要给 commander debug 状态接口增加 `lastReportSuccessAt/lastReportAckCode/lastReplaySuccessAt` 等成功确认信号，把“结果丢失”从高置信怀疑再推进到更硬定责。
 
 ## Progress Log
 
 - 2026-04-07 16:22 +0800 `android` 子仓已提交 `9e24e3825eb0baa50fc7e09dffe8e2974b40423b`：补齐 commander 包下载重试、首次运行态/结束态 durable 补偿、debug commander 配置接口、鉴权单例隔离与非法 `jobId` 非重试兜底；对应 `originDebug` 单测与 `s2` 真机回归已完成
 - 2026-04-07 16:26 +0800 已同步项目知识与跨项目任务线，冻结本轮 `s2` 真机证据、提交号和剩余稳定性隐患，后续可直接沿本任务线继续做“进程重启恢复范围 + timeout/重试参数拆分 + 非重试错误码收口”
 - 2026-04-08 00:08 +0800 `android` 子仓已提交 `a2cdd1e0`：补齐 commander 会话恢复与安全收尾底座（`CommanderRuntimeStore`、`BotService START_STICKY`、持久化 `developMode`）、拆分 `CONTROL / DOWNLOAD` 网络客户端、为异步心跳与 engine log 增加 durable replay、为 Portal 包缓存补 `md5/size/packagePath` 校验，并在 `s2` 通用 `originRelease 2.1.4` 上完成安装预热、状态查询与杀进程恢复回归
+- 2026-04-08 11:35 +0800 已同步第三轮 commander 定责增强：`android` 子仓把 `/api/platform_commander_state` 扩展到结果/引擎日志 durable replay 摘要，根仓采集脚本与离线分析脚本已消费这些字段，可更稳定地区分“客户端仍在补偿”“客户端未获平台确认”与“平台侧更可疑”
