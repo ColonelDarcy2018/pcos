@@ -5,7 +5,7 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `active`
-- updated_at: `2026-04-08 11:35 +0800`
+- updated_at: `2026-04-08 22:18 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -31,6 +31,8 @@
 9. 主机侧已补齐“客户执行脚本产 zip -> 支持侧离线分析”的外层闭环：`collect_device_diagnostics.py` 与 `analyze_diagnostic_bundle.py` 已落地，并完成 `s2` 真机闭环验证。
 10. 主机侧闭环已完成第二批增强：客户脚本默认不直接拉 App 私有目录，转而固定采集 ADB 公共快照、设备 HTTP/daemon 导出；同时补了网络环境快照、`platform_commander_state` / `platform_diagnostics_state` / `platform_diagnostics_events` 与 `network_trace_excerpt`。
 11. 离线分析脚本已能结合 commander durable replay 摘要做三段式定责：`client_network_issue`、`result_delivery_issue`、`platform_side_suspected`，把“结果丢失”从模糊判断升级成更稳定的证据链判断。
+12. 客户侧采集脚本已收口为单文件交付形态：`--issue-desc` 可省略并默认回落采集时间戳，`--help` 内置精简说明，`--print-minimal-usage-md` 可直接导出完整客户版 Markdown。
+13. `s2` 已完成“只拷贝脚本 + 仅传 `--serial`”的最简独立验证，确认脚本默认把 zip 产到当前目录 `tmp/` 下，交付口径可收敛为“只发一个 `.py` 文件给客户”。
 
 ## 下一步
 
@@ -46,3 +48,4 @@
 - 2026-04-07 10:51 +0800 已同步文档与任务线状态，澄清“小鹏项目守卫”是业务层 fail-fast 护栏；当前工作树可见的实现主要落在 `xp-wx1-simplified/videohao`，尚未确认项目级统一覆盖
 - 2026-04-07 16:21 +0800 已补齐主机侧诊断包采集/离线分析脚本，并在 `s2` 完成“真实任务 -> 诊断包 -> 离线分析”闭环验证；成功样本已能优先收敛为 `execution_success`
 - 2026-04-08 11:35 +0800 已完成第二批诊断增强同步：客户脚本边界冻结为“不直接拉 App 私有目录”，采集脚本补网络快照、commander/diagnostics 状态与 trace 摘录；Android `/api/platform_commander_state` 暴露 durable replay 摘要，离线分析脚本已可输出 `client_network_issue / result_delivery_issue / platform_side_suspected` 三段式结论
+- 2026-04-08 22:18 +0800 已完成客户交付形态收口：`collect_device_diagnostics.py` 内置客户说明，`--issue-desc` 可省略并默认写时间戳，`s2` 已验证“单文件脚本 + 最简 `--serial` 命令”即可独立产出诊断 zip
