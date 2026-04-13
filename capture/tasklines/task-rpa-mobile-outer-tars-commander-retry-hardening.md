@@ -5,7 +5,7 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `active`
-- updated_at: `2026-04-08 11:35 +0800`
+- updated_at: `2026-04-13 19:38 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -19,6 +19,12 @@
 
 该任务线用于沉淀塔斯 App commander 主链路在弱网下的下载重试、首次运行态/结束态 durable 补偿、进程重启后的 commander 恢复、调试切链和真机证据，避免后续再把“运营平台回报丢失”“包下载失败”“切换 origin/portal 串用鉴权”“杀进程后 commander 会话丢失”等问题散落到更泛的 runtime 任务线里。
 
+版本口径澄清（2026-04-13）：
+
+1. 当前源码主线 `versionName` 已迭代到 `2.1.6`。
+2. 本任务线中出现的 `originRelease 2.1.4 / buildTime=260407_2239`，属于 `2026-04-08` 这一轮 commander 加固的历史真机证据，不应直接当作今天设备上的当前版本事实。
+3. 后续若需要把本任务线作为真机判断依据，必须先重新查询目标设备的实际 `appVersion/buildTime`；构建/安装口径则优先参考 `tars-apk-build-baseline`。
+
 ## 当前同步结论（摘要）
 
 1. commander 主链路已新增 `PREPARING_PACKAGE` 状态，包准备不再继续占用 `TAKING` 的短超时窗口。
@@ -30,10 +36,11 @@
 7. `ApiRequest` 已拆分 `CONTROL` 与 `DOWNLOAD` 两套 `OkHttpClient` profile；Portal 包缓存也已补 `packagePath/packageMd5/packageSize` sidecar 校验，避免命中过期或错包。
 8. 异步心跳和 engine log 现在都具备 durable 回放：普通异步上报默认会落 `PersistentReportStore`，日志批次会落 `PersistentEngineLogStore` 并在后续轮询 replay。
 9. 通用包默认口径仍以 `origin` flavor 的通用 `originRelease` 为主，除非特别指定不切 `portal` 包。
-10. `s2 / WKDAUGWGEA75KRCM` 已安装通用 `originRelease 2.1.4`（`buildTime=260407_2239`），并完成 release 安装预热、commander 状态查询与杀进程后恢复回归。
+10. 历史回归样本里，`s2 / WKDAUGWGEA75KRCM` 曾安装通用 `originRelease 2.1.4`（`buildTime=260407_2239`），并完成 release 安装预热、commander 状态查询与杀进程后恢复回归；该条用于证明当轮加固已成立，不代表当前设备仍保持同一版本态。
 11. `/api/platform_commander_state` 已继续补齐 durable replay 摘要：结果/引擎日志 pending 数量、最近错误、关键任务标识与最近/下次尝试时间现已对外可见，可直接给主机侧诊断包和离线分析脚本消费。
+12. 当前若再出现“结果未确认 / 平台丢失结果”投诉，默认应沿 `tars-weak-network-result-delivery-phase1` 继续做实时稳态治理，而不是回到本任务线重复证明“是否已有基础重试”。
 
-## 真机验证证据
+## 历史真机验证证据（冻结于 2026-04-08）
 
 1. 包下载重试场景：
    `jobId=93001`、`packageId=93002`，首个下载请求强制 `HTTP 500`，第二次改为 `20s` 慢流成功；最终 `package_attempts=2`，任务成功，且 `PREPARING_PACKAGE` 期间无重复 `takeWork`。
@@ -50,12 +57,19 @@
 7. 重启后设备预热闭环：
    首次重启后 `platform_state` 一度显示 `accessibilityServiceHealthy=false`、`floatingWindowShowing=false`；随后执行平台预热后恢复为 `readyForRpa=true`，证明“极端杀进程”场景下仍需要预热链路兜底，但恢复路径已打通。
 
+这些证据的用途是：
+
+1. 证明该轮 commander 加固在当时版本线上已经成立。
+2. 为后续 AI 提供“为何无需重新争论基础重试/恢复是否存在”的事实基线。
+3. 不直接承担“当前设备现在还是这个版本态”的判断职责。
+
 ## 下一步
 
 1. 继续补齐“脚本执行上下文级”的恢复能力；当前已能恢复 commander 会话与安全收尾，但还不能让运行中的 Python 任务真正断点续跑。
 2. 在 `CONTROL / DOWNLOAD` 客户端拆分的基础上，继续把重试退避和 jitter 做 profile 级细分，避免两类流量仍沿用同一套线性 backoff。
 3. 扩展非重试错误分类，把参数非法、资源不存在、流程包元数据非法等终态进一步收口成 `origin/portal` 共用的统一错误码策略。
 4. 继续评估是否要给 commander debug 状态接口增加 `lastReportSuccessAt/lastReportAckCode/lastReplaySuccessAt` 等成功确认信号，把“结果丢失”从高置信怀疑再推进到更硬定责。
+5. 构建/安装/签名覆盖安装相关问题，默认转入 `tars-apk-build-baseline`；弱网实时 ACK 与结果稳态问题，默认转入 `tars-weak-network-result-delivery-phase1`。
 
 ## Progress Log
 
@@ -63,3 +77,4 @@
 - 2026-04-07 16:26 +0800 已同步项目知识与跨项目任务线，冻结本轮 `s2` 真机证据、提交号和剩余稳定性隐患，后续可直接沿本任务线继续做“进程重启恢复范围 + timeout/重试参数拆分 + 非重试错误码收口”
 - 2026-04-08 00:08 +0800 `android` 子仓已提交 `a2cdd1e0`：补齐 commander 会话恢复与安全收尾底座（`CommanderRuntimeStore`、`BotService START_STICKY`、持久化 `developMode`）、拆分 `CONTROL / DOWNLOAD` 网络客户端、为异步心跳与 engine log 增加 durable replay、为 Portal 包缓存补 `md5/size/packagePath` 校验，并在 `s2` 通用 `originRelease 2.1.4` 上完成安装预热、状态查询与杀进程恢复回归
 - 2026-04-08 11:35 +0800 已同步第三轮 commander 定责增强：`android` 子仓把 `/api/platform_commander_state` 扩展到结果/引擎日志 durable replay 摘要，根仓采集脚本与离线分析脚本已消费这些字段，可更稳定地区分“客户端仍在补偿”“客户端未获平台确认”与“平台侧更可疑”
+- 2026-04-13 19:38 +0800 已补版本漂移澄清：明确本任务线里的 `2.1.4` 仅是历史回归证据，当前源码版本已到 `2.1.6`；同时补充与 `tars-apk-build-baseline`、`tars-weak-network-result-delivery-phase1` 的职责边界，避免后续 AI 选错任务线。
