@@ -5,7 +5,7 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `in_progress`
-- updated_at: `2026-04-14 11:05 +0800`
+- updated_at: `2026-04-14 20:25 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -39,6 +39,40 @@
 3. 项目侧导航器与开发平台镜像导航器已同步同一恢复口径：`examples/mobile-rpa-cases/cases/xp-wx1-simplified/project/platform_navigators/wechat_navigator.py` 与 `rpa-dev-platform/daemon/core/wechat_navigator_sdk.py` 已完成同步，案例侧单测与仓级 `check_rpa_device_test_convention.py` 已通过。
 4. 本轮原计划补 `s2` 真机回归，但执行时本机 `adb` 与开发平台均未发现在线设备；该项保留为后续残差，不把“未拿到真机结论”误记为“已回归通过”。
 5. 作者主页进片恢复口径已再次收窄：当前保留“`MMFTSSearchTabWebViewUI` 先完整等待 `20s` 再回退并重试原卡片 1 次”，若同一候选第二次仍命中该 Activity，则直接按 `网络加载/页面异常` 失败收口，不再切下一张卡片；`AppBrandPluginUI` 的偏航恢复策略保持不变。
+
+## 当前补充结论（2026-04-14 16:08 +0800）
+
+1. `workUuid=d6574f612603e20a31599f6bade78edd` 的根因边界已重新收口：
+   - 云端截图明确停在微信搜索 `全部` tab，页面文案为“暂无相关结果 / 你可尝试更换搜索词”；
+   - 因此这类样本不再按“脚本找不到创作者主页入口按钮”理解，也不再尝试“切 `账号` tab 重试”。
+2. 项目侧导航器已按最小策略调整：
+   - 若当前 Activity 仍为 `MMFTSSearchTabWebViewUI`，且页面明确命中“无相关结果”提示，则直接抛 `未找到目标创作者：<author_id>；微信搜索结果无相关结果`；
+   - 不扩导航策略面，不改变既有人类已验证的“搜索命中后直接进入账号主页”主路径。
+3. 失败分类已确认复用现有口径，无需新造一套：
+   - `dispatch_common` 已存在内部 `target_not_found` 分类；
+   - 该类样本当前对客文案统一收口为 `目标未命中: ...`，上游可按“给定参数/目标查无结果”处理；
+   - 当前事实仍是它映射到对客 `failReason=31`，尚未拆出新的 public code，本轮不扩大改动面。
+4. 本轮已同步撤回一次错误方向：
+   - 先前短暂尝试过“`全部` 无结果时切 `账号` tab 重试主页入口”的窄兜底；
+   - 经用户确认后已完整撤回，仅保留“无结果即目标未命中”这一更符合上游处理预期的收口。
+5. 验证口径：
+   - 导航器定向测试、`dispatch_common` 分类测试与 `python3 CCOS/scripts/check_rpa_device_test_convention.py` 已通过；
+   - `s2` 补充真机探针未在观察窗口内稳定复现到与云端截图一致的空结果页，因此只把真机结果记为“未补充到新分支命中证据”，不误记为“代码无效”或“已完成真机闭环”。
+
+## 当前补充结论（2026-04-14 20:25 +0800）
+
+1. 创作者主页“轻触空白处，再次加载”收口已完成代码与真机双重闭环：
+   - 项目导航器与开发平台镜像导航器均已冻结统一口径：命中创作者主页空白提示后，最多点击重试 `2` 次；若仍未恢复，则直接抛 `网络加载/页面异常: 创作者主页内容区空白，点击“轻触空白处，再次加载”重试 2 次后仍未恢复`。
+   - 对客归类不再额外发散，继续复用现有 `network/page exception` 体系；重点是保留真实页面锚点与重试耗尽事实。
+2. `s2(WKDAUGWGEA75KRCM)` 已补到有效真机证据，且区分了“强造弱网失败路径”和“恢复网络后的页面自恢复路径”：
+   - 精准弱网探针 `job_id=mcppkg_20260414_191547_800077_d0995b23` 在 `19:16:56` 命中作者主页 Activity ready 后立即断网，随后依次出现 `retry=1/2`（`19:17:06`）、`retry=2/2`（`19:17:11`），最终按预期抛出上述 `网络加载/页面异常`；这证明重试分支与报错文案在真机上都已实际触发。
+   - 恢复网络后，再对当前卡住页面做“只点重试、不重跑全链路”的专项探针 `job_id=mcppkg_20260414_201412_059963_cde5bfce`，日志显示 `reload_hint_before=True -> retry=1/2 -> reload_hint_after=False -> recycler_ready child_size=13`，且任务 `status=成功`；这证明当前实现能把作者主页从空白态拉回可继续处理的列表态。
+3. “空白恢复后继续进片”链路也已在 `s2` 补到最小闭环：
+   - 探针 `job_id=mcppkg_20260414_201637_627684_88201ab8` 从 `FinderProfileUI` 起跑，先确认作者主页列表 `child_size=13`，随后稳定进入并停留在 `FinderProfileTimeLineUI`，最终任务成功结束。
+   - 这轮未观测到 `com.tencent.mm.ui.widget.dialog.x3`，因此当前可以客观记录为“作者主页空白恢复后继续进播放页已闭环”；`x3` 相关恢复守卫仍以代码与本地测试为主，本次真机记录不冒进写成“已在同轮复现并拦截”。
+4. 评论区稳定性侧已同步新增两项低风险守卫：
+   - `videohao/collect_runtime.py` 现会在评论迭代过程中检测 `com.tencent.mm.ui.widget.dialog.x3`，命中后自动 `back` 并记录 `[COMMENT_DIALOG_RECOVER]`；
+   - 同时新增已处理评论去重 key，避免因弹窗打断后恢复迭代时重复处理同一条评论或错乱评论序号。
 
 ## 上一轮收尾结论（2026-04-09 18:20 +0800）
 
@@ -90,6 +124,7 @@
 - 2026-04-13 15:40 +0800 已把“小鹏任务长时间挂住无法结束”的治理方向同步进稳定基线任务线，并明确当前推荐不是只做 Python 层 watchdog，而是双层方案：Android 运行时补绝对超时 watchdog，XP 业务层补 timeout 独立语义与阶段缓存；同时已完成一轮“能否先靠流程修复降低挂死概率”的代码梳理。当前确认的高风险流程漏洞有三类：其一，视频号评论、创作者页搜索、导航搜索等路径仍直接调用 `setText(...)`，若底层 `ACTION_SET_TEXT` 卡住，现有 Python 层无法主动跳出；其二，公众号旧主线 `gongzhonghao/main.py` 仍保留大量直接 `setText + sleep` 的旧式实现，且 `gongzhonghao/executor.py` 当前直接忽略 `act_observer`，意味着执行层暂时拿不到阶段级进展信号；其三，Android 远程状态机当前只对 `TAKING/PREPARING_PACKAGE/WAITING_START/STARTING` 做超时控制，进入 `RUNNING` 后只持续 heartbeat，不会因长时间卡死自动收口。后续建议先做 `SB-22` 的流程侧修复，尽可能把“输入动作黑盒卡住、无阶段心跳、旧主线弱观测”这些可修问题先消掉，再补 `SB-21` 的运行时硬兜底，把 residual 风险收干净。
 - 2026-04-14 10:45 +0800 已补充作者主页进片恢复策略收敛：`MMFTSSearchTabWebViewUI` 与 `AppBrandPluginUI` 不再混用同一恢复语义，当前冻结口径为“搜索 WebView 先重试原卡片 1 次，重复命中后再切下一张；AppBrand 继续直接按偏航分支切下一张”。同步已落到项目导航器与开发平台 `wechat_navigator_sdk` 镜像，并补齐案例侧单测。另冻结一条来源规则：`AppBrandPluginUI` 等 Activity 名称的真值来自运行时 `getCurrentActivityName()`，页面语义解释只能作为次级结论。本轮尝试补 `s2` 真机回归，但当前环境下 `adb devices` 与开发平台设备列表均为空，因此只记录为“真机待补”，不冒进写成已验证通过。
 - 2026-04-14 11:05 +0800 已按最新约束再次收窄作者主页进片恢复策略：确认当前恢复逻辑不会缩短原 `20s` 的播放页等待；随后删除了“搜索 WebView 重复命中后切下一张”的分支，当前冻结为“原卡片重试 1 次后若仍命中 `MMFTSSearchTabWebViewUI`，直接抛 `网络加载/页面异常: 作者主页视频卡片进入播放页等待超时（命中 MMFTSSearchTabWebViewUI）`”，交由现有 `failReason=30` 体系统一归类。项目导航器、开发平台 `wechat_navigator_sdk`、案例单测、开发平台单测与业务文档均已同步。
+- 2026-04-14 20:25 +0800 已把“创作者主页空白页恢复 -> 继续进片”真机证据同步回任务线：`s2(WKDAUGWGEA75KRCM)` 上已用三组探针分别补齐了“精准断网触发 `retry=1/2 -> retry=2/2 -> network/page exception`”、“恢复网络后当前页面单独点击重试可恢复出 `recycler_ready child_size=13`”以及“恢复后继续进入 `FinderProfileTimeLineUI` 播放页成功”三段证据。同步冻结当前结论：作者主页空白页重试逻辑和最终报错文案都已被真机命中，且在网络恢复后可以把同一页面拉回列表态并继续进片；评论 `x3` 弹窗自动返回与去重守卫已落代码和本地测试，但本轮真机记录未额外观测到 `x3`，不把其误记为已在同轮现场命中。
 - 2026-04-09 18:20 +0800 已完成本轮上下文与任务线收尾：`30=网络加载/页面异常` 对客收口、`95s + 5s` 搜索结果页等待基线、可复用排障前置规则文档与两次提交均已完成；项目内已新增 `CCOS/context/session-20260409-03.md`，并把 `task-index / session-latest / agent-focus` 路由到 `xpeng-stable-baseline`。后续若继续 `s2` 真机回归，必须先恢复 commander runtime 登录态，否则不要把 `RpaPyJob.onStart()` 的 `currentUser` 空指针误判成小鹏脚本回归。
 - 2026-04-09 08:55 +0800 已继续收口视频号 `31/32/3x` 排障信息与运行态守卫：`collect_runtime.py` 回撤了过宽的 hashtag chunk 模糊匹配，只保留截断标题前缀等更稳妥的命中口径；同时为“未命中目标视频”新增结构化失败文案，首版会拼出目标标题摘要、作者页搜索/复核结果、视频迭代停止条件与 `scanned` 计数，并在 `dispatch_common.summarize_user_failure(...)` 对外收口为“目标未命中: ...”，避免再把这类问题统统折叠成难读的脚本异常。同步新增 `videohao/wechat_runtime_guard.py` 与两组回归测试，在流程离开微信、落到登录页或不在视频相关页时直接 fail fast，防止真机排障继续盲跑错误页面。
 - 2026-04-08 21:47 +0800 已补齐一轮“云端失败样本 -> 原始 payload 真机回放 -> 代码修复 -> 二次回归”的闭环证据：针对 `workUuid=e823dab092c84b5242b801a4977f662e`，`rpa-dev-platform` 云端排障工作流已新增从 portal engine log 中提取原始 `task_payload` 的能力，并在 `troubleshoot_cloud_execution` 中返回 `observed_task_payloads / observed_task_payload_summaries`，后续 AI 排障遇到云端失败样本时，应优先直接回放云端原始 payload，而不是手写近似参数。本轮已在 `s2(WKDAUGWGEA75KRCM)` 上回放该样本真实 payload，确认历史云端主故障 `content_target_not_found/public_fail_reason=31` 在当前代码上已不再复现，但同时暴露出一个独立本地缺陷：`videohao/risk_control.py` 在 `after_all_acts` 末尾已经回到 `video_play` 后仍会误抛 `RuntimeError: after_all_acts 本地返回视频号播放页失败`。该缺陷已修复并补齐单测，随后二次真机回归 `mcppkg_20260408_213238_956858_57f63436` 已成功闭环，`after_all_acts` 正常结束，且本地 mock callback / snapshot 均返回 `200`。同时再冻结两条排障口径：其一，云端日志中若能提取到原始 `task_payload`，AI 自动排障必须先用该 payload 做真机复测；其二，若 `host_preflight_urls` 因宿主机代理环境导致 `localhost` 误走 SOCKS 或缺失 `socksio`，应归类为主机环境问题，不得误判为业务脚本失败。
