@@ -5,7 +5,7 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `in_progress`
-- updated_at: `2026-03-27 16:25 +0800`
+- updated_at: `2026-04-14 15:24 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -37,6 +37,7 @@
     - 对应 `SettingsHandler.reopenFloatingWindowAndWait()` 在主线程执行“若已显示则先 hide，再 show CircularMenu”的浮窗重建 lambda
     - 同窗日志可见多层 `Window{... com.aiindeed.mobileagent}` overlay 的 draw/remove、focus 切换与 token 回收，说明这类慢帧与浮窗恢复/预热路径直接相关，而不是纯系统误报
 13. 同日已落一小步噪音收敛：`android` 子仓已提交 `d6ab5cbe` `fix(android): harden current page info parsing`；`AgentHandler` 的 `currentPageInfo` 解析已改成 null-safe 字段读取，去掉单独 `NullPointerException` 噪音分支。
+14. `2026-04-14` 已完成一轮与本任务线直接相关的 `s2` release 真机回归：`android` 子仓提交 `826369b8` 已修复 `UiSelectorHandler` 高亮等待无超时的问题，`s2 / WKDAUGWGEA75KRCM` 上的 `UiObject.click()` 与 `clickVisible()` 已验证不再把任务吊死；但同机对照也确认“overlay 在场 + 原始坐标点击”仍会影响命中结果，因此运行态后续必须继续拆分“节点点击预览”和“像素点点击”两条链路。
 
 ## 本轮实施方案（可直接排期）
 
@@ -56,12 +57,14 @@
    - 先开 Phase 0/1，把门户 `jobUuid` 从塔斯内部运行主键职责里拆出来
    - 修 `ScriptRuntime.getClip()`，停止强切未注册的 `BotIMEService`
    - 补全 `currentPageInfo` 的分级降噪，确认缺字段/空页面不再升级成 NPE 或 RuntimeException
+   - 继续收口高亮预览链路：节点动作可保留短 preview，但像素点/坐标点击默认不要与 overlay 并发
    - 优化浮窗恢复/预热路径，避免 `SettingsHandler.reopenFloatingWindowAndWait()` 在主线程反复执行 `hideCircularMenu() + showCircularMenu()`
    - `CalledFromWrongThreadException` 先补“进程名/PID/自家类名”采样口径；在抓到塔斯进程栈之前，不再把它当成塔斯自有 crash
 5. 若后续要继续提升按开始时间的可观测性，设备端查询接口与 daemon 本地历史索引都应继续向“实例级标识”收敛，避免 `status/jobLogId` 再按复用 `job_id` 取最新值。
 
 ## Progress Log
 
+- 2026-04-14 15:24 +0800 已同步本轮高亮预览治理结论：`s2 / WKDAUGWGEA75KRCM` 已安装 `v2.1.6 / buildTime=260414_1347` release 包；`UiObject.click()` 回归任务 `mcpjob_20260414_142631_243258_36371db4` 与 `clickVisible()` 回归任务 `mcpjob_20260414_142714_077947_2f5dc27a` 均成功从 `MiuiSettings` 进入 `Settings$WifiSettingsActivity`，确认“动画等待无超时导致任务卡死”主问题已修住。与此同时，同坐标对照证明残余风险仍在：裸 `automator.click` 基线任务 `mcpjob_20260414_143113_310422_70b220b3` 可在 `160ms` 内成功进页，但 `showNodeHighlightAnimation(bounds) + 原始坐标点击` 任务 `mcpjob_20260414_142931_828374_6fac7d93` 虽然 `raw_click_result=true`、`animation_result=true`，页面仍停留在 `MiuiSettings`。后续运行态必须继续做“节点点击预览 / 像素点点击禁 overlay”分流，而不能把当前 `FLAG_NOT_TOUCHABLE` 误记成完全安全。
 - 2026-03-27 16:25 +0800 已继续推进 runtime 噪音任务线：在 114 设备最新日志里确认 `Slow main thread` 至少有一条自有来源是 `SettingsHandler.reopenFloatingWindowAndWait()` 的主线程浮窗重建 lambda；同步落地 `android` 子仓提交 `d6ab5cbe`，开始收敛 `currentPageInfo` 缺字段导致的噪音
 - 2026-03-26 16:25 +0800 已同步第二轮 runtime 方案与噪音收敛结论：把门户 `job_id` 语义拆分方案沉淀为可直接迭代的四阶段改造路径；同时修正 `CalledFromWrongThreadException` 归类，当前证据显示它发生在微信进程而非塔斯进程，故从“塔斯自有异常”降级为“目标 App/系统 Accessibility 噪音待继续观察”；仍维持 `BotIMEService` 与 `currentPageInfo` 为 app/runtime 优先治理项
 - 2026-03-24 17:00 +0800 已把 Android runtime 相关工作正式路由回本任务线：同步门户 `takeWork/report` 逻辑文档，按真实代码回填五态状态机、`STARTING` 窗口、首次同步上报与同 `requestUuid` 网络重试；同时补齐 `s4` 低内存诊断代码已落地的文档记录
