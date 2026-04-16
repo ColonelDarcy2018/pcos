@@ -19,6 +19,7 @@
 
 1. 本轮已补齐“需求池 + 收尾治理 + 公众号云端样本认知”的同步收口：
    - 新增 `CCOS/knowledge/patterns/requirement-pool-v1.md` 作为跨任务需求池入口，并把“收尾技能（任务线/文档/提交收口）”以 `POOL-SKILL-001` 正式入池。
+   - `2026-04-16` 已将该需求落地为真实技能：`/Users/zhuxiaowei/.codex/skills/收尾技能`，后续 AI 收到“同步文档任务线 / 提交代码 / 收尾 / 检查未完成项”时，应默认按该技能 workflow 执行。
    - 已把三条新坑点冻结到平台规则文档：
      - 云端历史 runtime 与当前仓库代码不能混看；
      - portal engine log 中间“流程运行成功”日志不能替代最终结果体；
