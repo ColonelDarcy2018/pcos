@@ -1,0 +1,87 @@
+# 小鹏视频号/公众号图片评论与 AI 自动化开发流程 Phase 1
+
+- taskline_id: `rpa-mobile/outer/xpeng-image-comment-human-test-phase1`
+- project_id: `rpa-mobile`
+- repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
+- ccos_node: `outer`
+- status: `in_progress`
+- updated_at: `2026-04-17 19:59 +0800`
+- updated_by: `codex(agent-codex-main)`
+
+## 背景
+
+项目内原始任务文档：
+`/Users/zhuxiaowei/apps/rpa-mobile/CCOS/context/task-xpeng-image-comment-human-test-phase1.md`。
+
+该任务线用于承接“小鹏视频号/公众号图片评论功能”的独立需求，并同步沉淀一套可复用的 AI 自动化开发流程，避免继续把该能力埋在旧的“不支持图片”历史口径里。
+
+## 当前进展（同步摘要）
+
+1. 新需求与新任务线已创建，Node/Hub 路由已接通。
+2. `human_test` 先行开发规则已冻结：
+   - 单文件独立下发
+   - 人工核对优先
+   - 默认优先无副作用
+   - `human_test` 真值未稳前不改正式流程
+3. 已落地首个探针：
+   - `examples/mobile-rpa-cases/cases/human_test/xpeng_comment_image_button_probe.py`
+4. 已记录现场首条真值：
+   - `s2` 视频号评论页中，图片按钮可由 `desc=图片 + class=android.widget.Button + clickable=true` 稳定命中。
+   - 现场观测到 `fullId=com.tencent.mm:id/upr`，但 `upr` 属短且混淆的随机样 id，只作辅助证据，不作为正式锚点。
+5. 已新增 `IMG-04` 真值：
+   - 第一段图片按钮（`upr`）点击后不会直接进相册，而是先收起键盘，仍留在 `FinderHomeAffinityUI`。
+   - 第二段图片按钮位于评论输入态右侧，`fullId=com.tencent.mm:id/tud`；点击后进入 `FinderAlbumUI`。
+   - 相册页已确认：`完成(id=kaq)`、`预览(id=je8)`、图片网格容器 `RecyclerView(id=jdw)`。
+6. 已新增 `IMG-06` 真值：
+   - 同一 `upr` 节点上，`node.click()` 与 `clickCenter()` 已确认触发不同页面分支；
+   - 只图片评论可在评论输入态直接点击 `tud` 进入相册；
+   - 图文混输已确认“先文字、后图片”可行：先 `setText`，再点 `tud`，从相册返回后文本仍保留。
+7. 公众号补充真值已确认并已接入正式 phase1：
+   - 微信文章页位于 `MMWebViewUI`，底部原生 `留言 XXX` 按钮可稳定展开留言抽屉；
+   - 当前正式链路已支持主评论入口 `actType=11 + images`，纯图片与图文混合评论都可执行；
+   - 对“评论抽屉久停导致首次发送失败”场景，执行层当前仅对带图评论启用一次“回微信主页 -> 重开文章 -> 重进评论区”的恢复重试。
+8. 视频号正式主线已拿到 ready-to-send 与真实发送证据：
+   - 已分别验证“图文混输”和“仅图片评论”两条路径；
+   - 真实发送后评论数与评论列表均发生可见变化，不能再表述为“尚未进入真实验证阶段”。
+9. 当前主线剩余缺口已收敛到：
+   - 云端 `images[]` 下载后，微信相册仍未稳定命中“本次刚下载的图片”；
+   - 多图入口虽已能下载，但正式选图 helper 仍只选首张，功能尚未闭环。
+10. 平台侧配套能力已补齐一轮：
+   - daemon/MCP/HTTP/Trae 扩展新增 scoped 录屏探针，可用短窗口 `screenrecord` 抓取一闪而过的 toast/notification；
+   - `collect_device_diagnostics.py` 已可自动回收关联 mp4；
+   - 当前口径仍是“先补证据，后视下次复现再决定是否做自动重试闭环”。
+11. 主线口径同步收口：
+   - 视频号 `actType=11` 已支持 `comment_images` phase1；`actType=12` 仍未支持图片盖楼，adapter 与知识文档已改成精确表述；
+   - 公众号旧 `main.py` 兼容 helper 回归已补齐，图片评论相关定向 `pytest` 已回归通过。
+12. 本轮补充：
+   - scoped 录屏探针已做烟测闭环：自然结束、挂接成功任务 artifacts、手动停止 mp4 落盘三条路径都已验证；
+   - 视频号 `comment_video()` 已补直接单测，覆盖“先文字后图片且相册返回后补写文字”与“纯图片评论不写文字”；
+   - `human_test/xpeng_comment_image_button_probe.py` 新增 repo-context 下的 `auto_navigate=true`，后续可通过带项目目录的流程包从微信首页自动走到评论态。
+13. 新增真机结论：
+   - 从微信首页直接跑视频号自动导航烟测时，任务未进入评论页挂图阶段，而是在搜索链路内跑偏；
+   - 该现象当前应先归因到“视频号搜索/作者导航稳定性”，不能把锅记到图片挂图 helper。
+14. 新增需求澄清：
+   - 当前正式基线代码已接入 phase1 图片评论，不再只是 `human_test` 探针状态；
+   - 小鹏客户侧正式图片输入建议冻结为 OSS 图片地址数组；`2026-04-17` 仓内已落地 `comment_image_assets.py`，设备侧会在发送前执行“清理本地图片暂存区 -> 下载图片 -> best-effort 媒体扫描 -> 选择首张下载图片”的执行层入口，但真实 OSS mock 数据真机回归仍待补齐；
+   - AI 自动化开发平台侧已新增“覆盖安装优先、完全重装单独接管”的事实基线，并补成两个本地技能，后续应尽量避免非必要卸载重装打断小鹏主线。
+
+## 下一步
+
+1. 优先补齐“云端下载后的图片稳定命中本次下载图”这条执行闭环，而不是继续证明本地首图可发送。
+2. 冻结单图/多图正式契约：张数上限、顺序、部分失败策略、相册勾选后校验方式。
+3. 用真实 OSS/mock 数据继续做视频号与公众号正式回归，完成云端图片输入闭环。
+4. 后续如需装新塔斯包，默认优先使用覆盖安装路径，避免非必要完全重装打断主线验证。
+
+## Progress Log
+
+- 2026-04-16 19:20 +0800 新任务线启动：完成 Node/Hub 路由、`human_test` 规则升级、PRD/逻辑图谱沉淀与图片按钮首探针落地
+- 2026-04-16 19:35 +0800 `ccos_p0.py sync` 零告警、首探针 `py_compile` 通过、设备测试规范守卫通过；用户当前要求先不做真机探针测试，后续可直接从 `s2` 现场继续
+- 2026-04-16 19:45 +0800 用户后续指定 `s2` 且要求先做视频号后，执行无点击真机复测：`job_id=mcpjob_20260416_185909_601791_e4f45f9e` 于 18:59 正常结束，命中 `active_window` 中的 `desc=图片/class=android.widget.Button/clickable=true/fullId=com.tencent.mm:id/upr`；未点击图片按钮、未打开相册、未发送评论
+- 2026-04-16 19:50 +0800 `IMG-04` 真机推进：第一段图片按钮 `upr` 点击后只收起键盘；第二段图片按钮 `tud` 点击后进入 `com.tencent.mm.plugin.finder.ui.FinderAlbumUI`。相册页当前已确认 `完成(id=kaq)`、`预览(id=je8)`、`RecyclerView(id=jdw)` 三个关键节点，未选图、未发送
+- 2026-04-16 19:43 +0800 `IMG-06` 真机推进：`upr` 的 `node.click()` 与 `clickCenter()` 已确认语义不同；图文混输首轮真值已冻结为“先 `setText`，再点 `tud` 进相册，返回后文本仍保留”；只图片评论链路可直接在评论输入态点击 `tud`
+- 2026-04-16 21:25 +0800 `IMG-09` 公众号真机推进：`mcpjob_20260416_204816_957554_3d2b1626` 已确认 `MMWebViewUI` 文章页底部 `留言 XXX` 按钮可展开留言抽屉，但 `mcpjob_20260416_205020_528158_3dac9426` 证明抽屉展开后 `active window` 与 `detectAllWindow()` 都拿不到 `回复/发送/EditText/图片` 等稳定节点；已把结论沉淀到任务文档、平台规则与开发文档，并在 `gongzhonghao` contract 层显式阻断 `actType=11 + images`
+- 2026-04-17 12:15 +0800 平台侧收尾：scoped 录屏探针已落到 daemon/MCP/HTTP/Trae 扩展与诊断采集脚本，补齐短暂微信“上传失败”类弹窗的取证能力；当前未开启自动重试闭环，主线继续回到小鹏图片评论实现与真机回归
+- 2026-04-17 12:35 +0800 主线收口补丁：视频号 `actType=11` 图片评论支持口径已和 adapter/知识文档对齐，`actType=12` 明确保留“纯文本盖楼”限制；公众号旧 `main.py` 回归点已修复，定向 `pytest` 为 `89 passed`
+- 2026-04-17 12:35 +0800 平台探针烟测收口：`mcpjob_20260417_122138_680826_e09ec89b` 与 `mcpjob_20260417_122206_060118_24b296d2` 已验证录屏可挂到 artifacts；`screenrec_20260417_122234_202768_e4d6d46b` 已验证手动停止后 mp4 落盘。与此同时，视频号 `comment_video()` 新增两条关键顺序单测；`xpeng_comment_image_button_probe.py` 已补 repo-context `auto_navigate=true`
+- 2026-04-17 12:30 +0800 视频号自动导航烟测：`mcppkg_20260417_123005_433836_88d3f37e` 以“首页 -> 搜索 -> 目标视频 -> 评论页 -> 挂图不发送”为目标运行，但现场截图显示链路依次停在“小鹏汽车”搜索结果页、空白搜索页、再漂移到 `手养牡丹鹦鹉` 搜索页；任务随后手动停止，当前定位回到导航链路卡点
+- 2026-04-17 19:59 +0800 收尾补充：已把“覆盖安装优先、完全重装单独接管”的平台口径写入项目仓业务逻辑，并新增本地技能 `tars-app-overlay-install` 与 `tars-app-full-reinstall`。两者 `quick_validate` 均已通过；这层沉淀不直接改变图片评论执行逻辑，但用于减少后续 AI 真机回归被安装链路打断的概率
