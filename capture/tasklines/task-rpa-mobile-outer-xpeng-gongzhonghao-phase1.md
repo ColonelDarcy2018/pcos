@@ -4,32 +4,36 @@
 - project_id: `rpa-mobile`
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
-- status: `in_progress`
-- updated_at: `2026-03-04`
+- status: `done`
+- updated_at: `2026-04-22 11:40 +0800`
 - updated_by: `codex(agent-codex-main)`
 
-## 背景
+## 当前结论
 
-项目内原始任务文档：
-`/Users/zhuxiaowei/apps/rpa-mobile/CCOS/context/task-xpeng-gongzhonghao-phase1.md`。
+1. 公众号主目标已完成，本任务线归档。
+2. 当前代码真值已切换为：
+   - `gongzhonghao/contracts.py + executor.py + main.py + article_forwarder.py + reporting.py`
+   共同构成公众号执行基线。
+3. 当前公众号已支持 `11/12/13/14/15/21/31/32/41`，并已完成：
+   - 参数适配与 contract 收口；
+   - 手写 `main.py` 的外层兼容执行；
+   - `21/31/32/41` 结果规范化；
+   - 文章补齐转发重试与网络错误映射；
+   - 对应测试基线。
+4. 当前代码真值已不再是“转发成功后由 PC 端承担唯一最终 callback”：
+   - 手机端 forward 成功后仍继续 callback；
+   - forward 失败时手机端转为失败 callback。
 
-该任务线聚焦公众号域一期最小可执行链路（指定链接入口、账号类型约束、D11 采链接边界），并保持与视频号及主线框架解耦。
+## 后续路由
 
-## 当前进展（同步摘要）
-
-1. 已完成任务线启动步骤 1-3：Node 路由切换、Hub 路由回写、行动计划审阅稿落盘。
-2. Node 并发路由已迁移为 `task-index + agent-focus`，不再依赖 `current-task` 单指针。
-3. `STEP-4` 已落地：`project/gongzhonghao/` 独立目录、一期参数契约、`actType=41` 适配层映射与对应测试已补齐。
-4. 操作原则已冻结：`app.py` 保持稳定基线不改，公众号落地实现统一下沉 `project/gongzhonghao/` 独立目录，便于单测与解耦迭代。
-
-## 下一步
-
-1. 回写 Node 任务索引与认领状态，切回该任务线持续推进 `GZH-04~GZH-07`。
-2. 进入 D11 边界定义、回调模板与真机验证清单收敛。
-3. 阶段收口前执行 `python3 CCOS/scripts/check_rpa_device_test_convention.py`。
+1. 公众号缺陷与真实样本回归默认并入：
+   - `rpa-mobile/outer/xpeng-stable-baseline`
+2. 公众号历史文档清理、真机回归增强与兼容层尾项整理已转入需求池：
+   - `/Users/zhuxiaowei/apps/rpa-mobile/CCOS/knowledge/patterns/requirement-pool-v1.md`
+   - `POOL-TOOL-005`
+3. 若未来新增公众号能力，再单独开新任务线，不直接恢复本归档线。
 
 ## Progress Log
 
-- 2026-03-04 17:33:45 +0800 任务线启动：完成 Node/Hub 路由同步与行动计划审阅稿落盘，待用户审核后执行。
-- 2026-03-04 17:38:00 +0800 用户新增“app.py 冻结 + 独立目录模块化实现”原则，已同步 Node/Hub 任务线文档。
-- 2026-03-04 20:15:00 +0800 并发路由迁移：Node 侧改为 `task-index + agent-focus`；`STEP-4` 代码与测试产出已完成。
+- 2026-04-22 11:40 +0800 基于云端样本 `workUuid=ac0c20d7abd0a8e189be5f2b3b4be93f` 完成公众号 `actType=11` 发评链路收口：真机回放确认旧 `NoneType.setText` 已消失，但原样本真实失败原因为“作者已设置关注 N 天后可以留言”；当前代码已改为先尝试点击 `关注公众号/关注`，若评论抽屉已展开但输入区未 ready 则归内部 `network_page_exception`（当前对客仍回 `99 + 网络加载/页面异常:` 前缀），若命中留言权限限制则沿用既有账号受限类两位码 `23` 并保留精确 `failMsg`，不擅自新增新的对客错误码。
+- 2026-04-16 19:32 +0800 按最新公众号流程代码重写归档摘要：明确当前代码支持范围、forward/callback 真值、结果规范化与后续路由；任务线状态由 `paused` 收口为 `done`
