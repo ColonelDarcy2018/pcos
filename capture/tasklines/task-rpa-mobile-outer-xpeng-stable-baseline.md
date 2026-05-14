@@ -5,7 +5,7 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `in_progress`
-- updated_at: `2026-04-14 20:25 +0800`
+- updated_at: `2026-05-14 21:34 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -14,6 +14,16 @@
 `/Users/zhuxiaowei/apps/rpa-mobile/CCOS/context/task-xpeng-stable-baseline.md`。
 
 该任务线用于沉淀小鹏相关“稳定基线”改造项，避免零散审查结论散落在会话里。当前已冻结的首个待办，是 `xp-wx1-simplified` 删除旧结果兼容层、只保留 XP callback 与 mock 返回链路的实现方案。
+
+## 当前补充结论（2026-05-14 21:34 +0800）
+
+1. 用户已明确确认：“流程层先降卡死概率”这一步在持续流程迭代中已处理 enough，因此原先挂在本任务线里的流程侧卡死治理评审子题按已处理标记，不再继续作为 `xpeng-stable-baseline` 的进行中方向。
+2. Android 运行时绝对超时 watchdog 方案已完成评审冻结，但该需求不再留在小鹏业务稳定基线里实现：
+   - 正式流程级配置 key 冻结为顶层 `inputParam.runtime_timeout_ms`
+   - App 设置页需补“默认流程超时”作为设备级 fallback
+   - timeout 终态必须继续与 manual stop 分离，不能复用“用户手动停止”语义
+3. 上述 runtime 方案已同步沉淀到项目仓需求池与塔斯 runtime 任务线；后续实现统一从 `task-tars-android-runtime-optimization-phase1` 推进，不再继续挂在本任务线内。
+4. 整条 `xpeng-stable-baseline` 任务线当前不能关闭：它仍承载 simplified 稳定基线的其他 residual、真机回归与结构收口事项；本轮关闭的只是 timeout 评审子题。
 
 ## 当前收尾结论（2026-04-13 20:30 +0800）
 
@@ -75,6 +85,37 @@
    - `videohao/collect_runtime.py` 现会在评论迭代过程中检测 `com.tencent.mm.ui.widget.dialog.x3`，命中后自动 `back` 并记录 `[COMMENT_DIALOG_RECOVER]`；
    - 同时新增已处理评论去重 key，避免因弹窗打断后恢复迭代时重复处理同一条评论或错乱评论序号。
 
+## 当前补充结论（2026-04-14 21:05 +0800）
+
+1. `workUuid=f362013e14afddbc08960ad084266680` 已完成“原样 payload -> s2 真机回放 -> 用户人工复核”的闭环定性：
+   - 当前最终结论不是流程误判，而是上游入参给定的 `targetTitle` 本身不在作者 `极速速777` 的视频列表中；
+   - 因此该样本继续按 `failReason=31 / 目标未命中` 收口是正确业务结果，不应再反推为标题匹配逻辑 bug。
+2. 视频号 `iter_video(...)` 之前确实缺少“作者最后一条视频刷不动后的触底停止”逻辑：
+   - 旧基线在最后一条视频标题持续不变时，只会重复走“视频加载慢”等待；
+   - 本轮已补“连续相同标题 -> 触底确认滑动 2 次 -> 仍不变则停止迭代”的最小守卫，并补齐本地回归测试。
+3. `s2(WKDAUGWGEA75KRCM)` 真机回放结果证明触底守卫有效但不改变业务真值：
+   - 旧回放 `job_id=mcppkg_20260414_202627_888876_f22688bb` 于 `20:26:28 -> 20:35:11` 结束，最终回调为 `视频迭代停止(release_time='7天前',scanned=6,pinned=5)`；
+   - 新回放 `job_id=mcppkg_20260414_204152_950984_cdcef460` 于 `20:41:53 -> 20:48:55` 结束，专属日志已命中 `触底确认滑动 attempt=1/2` 与 `视频迭代器检测到疑似触底，停止迭代`；后续对客文案进一步冻结为继续按“未命中目标视频/标题”收口，触底仅保留在日志里作为内部诊断证据；
+   - 两轮顶层结果都保持 `failReason=31 / 目标未命中`，说明新逻辑只减少无意义停留时间，不改变“目标不存在”这一业务判定。
+4. 后续 AI 处理同类 `31/32/3x` 未命中样本时，必须先区分三种根因：
+   - 微信作者页搜索模糊匹配导致候选偏差；
+   - 我方标题/时间匹配逻辑误判；
+   - 上游入参给定标题本身不存在于作者视频列表中。
+   当前 `f362...` 样本已冻结为第 `3` 类典型案例。
+
+## 当前补充结论（2026-04-15 20:39 +0800）
+
+1. 公众号云端样本 `workUuid=07a98f11b661c6dfa02d28954e3d7d1c` 已完成根因收口：
+   - 当前失败不是 callback/snapshot 问题，也不是“文章未找到”；
+   - 根因是公众号正式兼容层在“已知 sign”的任务里仍走 `jump_file_transfer_page -> zbot.getClip()`，云端运行时因此因剪切板权限/可用性受限失败。
+2. 当前修复边界已冻结为“只改正式兼容层，不改手工基线”：
+   - `gongzhonghao/executor.py` 中 `_open_article_by_sign(...)` 已切到 `jump_file_transfer_page_not_copy()`，并补文章页 ready 判定；
+   - 手工 `gongzhonghao/main.py` 保持原始人工脚本语义，不因这次正式链路修复而改变独立导出运行能力。
+3. 老采集链路的剪切板依赖也已完成一次结构化澄清：
+   - `21/41` 中的 `copy_link()`、`get_link_in_platform()`、`get_search_result()/get_search_result1()` 当前仍必须保留剪切板；
+   - 原因不是历史包袱，而是它们直接负责产出 `articleData.sign` 真值；当前兼容层虽然忽略 `_list_link`，但仍依赖 `article_dict/comment_dict` 中以文章链接为 key 的结构，不存在现成替代数据源。
+4. 后续若要继续推进公众号去剪切板治理，必须先验证出“无需剪切板也能稳定拿到公众号 canonical URL”的替代信号；在此之前，不应把“已知 sign 正式链路去剪切板”扩大解释为“公众号所有链路都可去剪切板”。
+
 ## 上一轮收尾结论（2026-04-09 18:20 +0800）
 
 1. 本轮与“网络/页面异常”直接相关的代码与知识沉淀已提交完成：
@@ -120,8 +161,11 @@
 4. 若补跑 AI 标准链路或 OpenAPI 文档样例，默认先从 `41 -> 21 -> 3x -> 1x` 的 `爱吃波客` 稳定基线取数，再决定是否回切 `小鹏汽车` 对照样本。
 5. `SB-20` 当前代码已落地，下一步优先补 `s2` 真机专项回归：覆盖 `21/41/3x/1x/51` 与公众号 smoke，确认前后风控时机、真实页面动作、总停留时长与最终 callback 顺序符合冻结口径。
 6. 卡死治理推荐顺序先按“流程侧漏洞修复 -> 真机复核 -> Android 运行时硬超时兜底”推进；不要一上来只加 watchdog，否则仍会留下大量流程内黑盒卡点，后续排障证据也不够清晰。
+7. 公众号后续若继续治理剪切板问题，优先先做 `21/41` 链路的 URL 真值来源专项验证，再决定是否继续动 `copy_link()` 等手工基线逻辑；当前稳定基线只接受 executor 层对已知 `sign` 的最小修复。
 
 ## Progress Log
+- 2026-04-14 21:05 +0800 已完成 `f362013e14afddbc08960ad084266680` 的真机回放收口：用户人工复核确认该样本的 `targetTitle` 本身不在作者 `极速速777` 的视频列表中，因此失败属于正确的“目标未命中”，不是流程 bug。同步已为 `videohao/collect_runtime.py` 的 `iter_video(...)` 增加“连续相同标题 -> 触底确认滑动 2 次 -> 仍不变则停止迭代”的守卫，并在 `s2(WKDAUGWGEA75KRCM)` 上用同一 payload 补完二次回放。新回放 `job_id=mcppkg_20260414_204152_950984_cdcef460` 的专属 ObjectBox 日志已命中 `20:48:41/20:48:45` 两次触底确认和 `20:48:49` 的“疑似触底，停止迭代”；总耗时也从上一轮约 `8m43s` 收敛到约 `7m02s`。随后已再收一刀对客失败提示：主文案继续按“未命中目标视频/标题”收口，不再把 `视频迭代耗尽(scanned=4)` 这类触底细节抬给上游。当前冻结口径是：这类触底守卫属于稳定性优化，不改变 `failReason=31 / 目标未命中` 的业务判定。
+- 2026-04-15 20:39 +0800 已完成公众号 `workUuid=07a98f11b661c6dfa02d28954e3d7d1c` 的剪切板故障收口：当前已确认失败根因是正式兼容层在“已知 sign”的任务里仍读取剪切板，而不是 callback/snapshot 或文章未找到问题。代码只在 `gongzhonghao/executor.py` 做了最小修复：`_open_article_by_sign(...)` 改走 `jump_file_transfer_page_not_copy()` 并补文章页 ready 判定；对应回归测试已新增。随后按用户澄清，已撤回对手工 `gongzhonghao/main.py` 的去剪切板改动，保持其独立导出运行能力不受正式链路影响。同轮也已把老采集链路梳清：`21/41` 中的 `copy_link()`、`get_link_in_platform()`、`get_search_result()/get_search_result1()` 当前仍必须保留剪切板，因为它们直接负责产出 `articleData.sign` 真值；在验证出新的 canonical URL 来源之前，不再扩大这轮改动范围。
 - 2026-04-13 15:40 +0800 已把“小鹏任务长时间挂住无法结束”的治理方向同步进稳定基线任务线，并明确当前推荐不是只做 Python 层 watchdog，而是双层方案：Android 运行时补绝对超时 watchdog，XP 业务层补 timeout 独立语义与阶段缓存；同时已完成一轮“能否先靠流程修复降低挂死概率”的代码梳理。当前确认的高风险流程漏洞有三类：其一，视频号评论、创作者页搜索、导航搜索等路径仍直接调用 `setText(...)`，若底层 `ACTION_SET_TEXT` 卡住，现有 Python 层无法主动跳出；其二，公众号旧主线 `gongzhonghao/main.py` 仍保留大量直接 `setText + sleep` 的旧式实现，且 `gongzhonghao/executor.py` 当前直接忽略 `act_observer`，意味着执行层暂时拿不到阶段级进展信号；其三，Android 远程状态机当前只对 `TAKING/PREPARING_PACKAGE/WAITING_START/STARTING` 做超时控制，进入 `RUNNING` 后只持续 heartbeat，不会因长时间卡死自动收口。后续建议先做 `SB-22` 的流程侧修复，尽可能把“输入动作黑盒卡住、无阶段心跳、旧主线弱观测”这些可修问题先消掉，再补 `SB-21` 的运行时硬兜底，把 residual 风险收干净。
 - 2026-04-14 10:45 +0800 已补充作者主页进片恢复策略收敛：`MMFTSSearchTabWebViewUI` 与 `AppBrandPluginUI` 不再混用同一恢复语义，当前冻结口径为“搜索 WebView 先重试原卡片 1 次，重复命中后再切下一张；AppBrand 继续直接按偏航分支切下一张”。同步已落到项目导航器与开发平台 `wechat_navigator_sdk` 镜像，并补齐案例侧单测。另冻结一条来源规则：`AppBrandPluginUI` 等 Activity 名称的真值来自运行时 `getCurrentActivityName()`，页面语义解释只能作为次级结论。本轮尝试补 `s2` 真机回归，但当前环境下 `adb devices` 与开发平台设备列表均为空，因此只记录为“真机待补”，不冒进写成已验证通过。
 - 2026-04-14 11:05 +0800 已按最新约束再次收窄作者主页进片恢复策略：确认当前恢复逻辑不会缩短原 `20s` 的播放页等待；随后删除了“搜索 WebView 重复命中后切下一张”的分支，当前冻结为“原卡片重试 1 次后若仍命中 `MMFTSSearchTabWebViewUI`，直接抛 `网络加载/页面异常: 作者主页视频卡片进入播放页等待超时（命中 MMFTSSearchTabWebViewUI）`”，交由现有 `failReason=30` 体系统一归类。项目导航器、开发平台 `wechat_navigator_sdk`、案例单测、开发平台单测与业务文档均已同步。

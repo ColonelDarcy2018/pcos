@@ -5,7 +5,7 @@
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
 - status: `in_progress`
-- updated_at: `2026-04-14 15:24 +0800`
+- updated_at: `2026-05-14 21:34 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -14,6 +14,21 @@
 `/Users/zhuxiaowei/apps/rpa-mobile/CCOS/context/task-tars-android-runtime-optimization-phase1.md`。
 
 该任务线用于沉淀塔斯 App Android 运行时相关的轮询、门户任务下拉与上报、运行态窗口治理，以及低内存现场诊断能力，避免把 `xp-wx1-simplified` 业务稳定基线与 Android runtime 改造混在同一条任务线内。
+
+## 当前同步结论（2026-05-14 21:34 +0800）
+
+1. “Android 运行时超时后强杀”现已正式路由到本任务线承接；`xpeng-stable-baseline` 仅保留历史评审结论，不再承担实现。
+2. 流程级配置 contract 已冻结：
+   - 正式 key：顶层 `inputParam.runtime_timeout_ms`
+   - 兼容读取短期允许 `runtimeTimeoutMs` 与 `task_payload.runtime_timeout_ms/runtimeTimeoutMs`
+   - 长期文档与平台口径只保留 `runtime_timeout_ms`
+3. 设备级 fallback 已冻结：App 设置页新增“默认流程超时”，仅在本次流程未显式下发 `runtime_timeout_ms` 时生效。
+4. 运行时行为已冻结：
+   - 任务进入 `RUNNING` 后启动绝对墙钟 watchdog
+   - heartbeat 不刷新 timeout deadline
+   - 到期先 soft stop，再给短宽限期；仍不退出则升级为进程级 kill
+   - timeout 最终态必须与 manual stop 分离，并优先持久化 timeout 结果，避免重启后只剩通用 `APP_PROCESS_RESTARTED`
+5. 下一轮实现优先级已前移：`CommandWork / RpaJobManager / RpaItem / ScheduleException / Pref / SettingsHandler / SettingsModule / NewSetting.tsx` 是本轮冻结的主改造落点。
 
 ## 当前同步结论（摘要）
 
