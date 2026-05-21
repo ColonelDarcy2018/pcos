@@ -4,8 +4,8 @@
 - project_id: `rpa-mobile`
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
-- status: `active`
-- updated_at: `2026-04-08 22:18 +0800`
+- status: `done`
+- updated_at: `2026-04-16 18:56 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -33,13 +33,22 @@
 11. 离线分析脚本已能结合 commander durable replay 摘要做三段式定责：`client_network_issue`、`result_delivery_issue`、`platform_side_suspected`，把“结果丢失”从模糊判断升级成更稳定的证据链判断。
 12. 客户侧采集脚本已收口为单文件交付形态：`--issue-desc` 可省略并默认回落采集时间戳，`--help` 内置精简说明，`--print-minimal-usage-md` 可直接导出完整客户版 Markdown。
 13. `s2` 已完成“只拷贝脚本 + 仅传 `--serial`”的最简独立验证，确认脚本默认把 zip 产到当前目录 `tmp/` 下，交付口径可收敛为“只发一个 `.py` 文件给客户”。
+14. 当前更值得长期复用的隐性结论是：客户采集脚本已经验证 ADB-first 降级行为，即使 `daemon` 不可用或设备侧部分 HTTP 接口返回 `404`，也仍可能成功产出可分析 zip。
+15. 因此后续支持侧若拿到缺少 `device_http/daemon` 证据的 bundle，应优先按“部分证据包”继续分析，而不是先把问题归到采集器本身。
+16. 上述口径已同步进入 `tars-diagnostic-analysis` 技能本身；后续 AI 只要按技能入口处理诊断包，就会默认按“部分证据 bundle”继续分析，而不是先要求客户重跑。
+17. `collect_device_diagnostics.py` 现已默认尝试按最近 `24h` 时间窗抓取 logcat，并把“目标窗口 / 实际窗口 / 是否真的覆盖到目标起点”直接写入 `summary.json` 与 `README.md`，避免支持侧把单次样本误判成“完整一天证据”。
+18. `analyze_diagnostic_bundle.py` 已同步把 logcat requested/actual coverage 纳入分析结果；若设备 log buffer 历史不足，会显式提示“目标时间窗未完整覆盖”，从而把“一天内网络问题”的结论限定在真实保留下来的窗口上。
+19. 这意味着当前诊断链路已经能更诚实地回答“这次 bundle 实际能对多长时间负责”，但仍不能承诺单次采集必然覆盖完整 `24h`；是否保得住一天历史，仍取决于设备 log buffer 容量与日志流量。
 
 ## 下一步
+
+> 2026-04-16 路由收口：MVP、主机侧诊断包采集/离线分析、客户脚本与长时间证据增强均已落地，本任务线标记为 `done`。后续新增诊断增强按具体问题域进入 runtime 或 weak-network。
 
 1. 本任务线的 MVP 证据链已在 `s2` 真机验证通过；若继续推进“异常切出微信 fail-fast”，建议从现有 `videohao` 守卫抽象统一入口，而不是重复发明新机制。
 2. 守卫接入前先确定前台事件过滤规则，避免把塔斯内部 `Dialog` 变化或系统弹窗误判成异常切出。
 3. 后续按需推进 `JobRecoder` 增量刷盘、真实失败样本回归，以及诊断 bundle / 开发平台消费能力继续收口。
 4. 若要继续减少“平台丢结果”争议，优先补 commander 状态接口中的 `lastReportSuccessAt/lastReportAckCode/lastReplaySuccessAt` 等成功确认信号。
+5. 若后续目标升级为“稳定证明整天网络质量”，下一步优先做常驻式滚动采样或周期性快照，而不是继续依赖单次 `logcat -d`。
 
 ## Progress Log
 - 2026-04-03 15:51 +0800 已创建塔斯诊断日志 MVP 任务线，并同步项目任务文档、知识基线与流程图；冻结“durable 平台事件 + 最新状态快照 + 最小导出接口 + 关键运行态挂点”的增量实现方向
@@ -49,3 +58,6 @@
 - 2026-04-07 16:21 +0800 已补齐主机侧诊断包采集/离线分析脚本，并在 `s2` 完成“真实任务 -> 诊断包 -> 离线分析”闭环验证；成功样本已能优先收敛为 `execution_success`
 - 2026-04-08 11:35 +0800 已完成第二批诊断增强同步：客户脚本边界冻结为“不直接拉 App 私有目录”，采集脚本补网络快照、commander/diagnostics 状态与 trace 摘录；Android `/api/platform_commander_state` 暴露 durable replay 摘要，离线分析脚本已可输出 `client_network_issue / result_delivery_issue / platform_side_suspected` 三段式结论
 - 2026-04-08 22:18 +0800 已完成客户交付形态收口：`collect_device_diagnostics.py` 内置客户说明，`--issue-desc` 可省略并默认写时间戳，`s2` 已验证“单文件脚本 + 最简 `--serial` 命令”即可独立产出诊断 zip
+- 2026-04-09 11:23 +0800 已补齐“降级仍可产包”的任务线结论：`daemon` 不可用或设备 HTTP 局部 `404` 时，客户脚本仍可基于 ADB 证据继续生成 zip；后续 AI 看到缺失 `device_http/daemon` 的 bundle 时应按部分证据包继续分析
+- 2026-04-09 13:59 +0800 已把上述结论同步进 `tars-diagnostic-analysis` 技能：技能现在会显式要求先看 `summary.json` warnings / steps，再按 ADB-first 口径分析部分证据 bundle
+- 2026-04-10 11:13 +0800 已补齐“长时间窗口真实性”能力：采集脚本默认尝试抓最近 `24h` logcat，并在 bundle 中记录 requested/actual coverage 与 buffer 信息；离线分析器会显式提示目标窗口是否真正覆盖，避免把设备 buffer 不足时的样本过度外推成“完整一天证据”

@@ -4,8 +4,8 @@
 - project_id: `rpa-mobile`
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
-- status: `in_progress`
-- updated_at: `2026-04-13 19:38 +0800`
+- status: `done`
+- updated_at: `2026-04-16 18:56 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -60,6 +60,8 @@
 3. 若问题属于“弱网导致平台过程态丢失结果、实时 ACK 不稳、需要长时网络体检”，优先转到 `tars-weak-network-result-delivery-phase1`。
 
 ## 下一步
+
+> 2026-04-16 路由收口：构建/安装/签名/版本校验口径已冻结，本任务线作为基线复用，不再保持活跃。
 
 1. 继续评估是否要把“覆盖安装失败后自动卸载重装”的策略再产品化成对混合版本设备群更友好的单键升级工作流。
 2. 若后续要支持更多构建组合，应继续复用“统一命名 + 文件名解析 + 设备端版本确认”这条闭环，避免重新出现“装的是哪个包说不清”的问题。

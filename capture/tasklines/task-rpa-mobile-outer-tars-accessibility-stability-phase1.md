@@ -4,8 +4,8 @@
 - project_id: `rpa-mobile`
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
-- status: `active`
-- updated_at: `2026-03-18 13:20 +0800`
+- status: `paused`
+- updated_at: `2026-04-16 18:56 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -27,6 +27,8 @@
 5. 已记录外部阻塞：仓库约定检查失败点来自既有测试文件 `examples/mobile-rpa-cases/cases/xp-wx1-simplified/project/tests/test_videohao_executor.py` 缺少 `main(zbot, *args, **kwargs)`，非本任务改动引入，仍需单独处理。
 
 ## 下一步
+
+> 2026-04-16 路由收口：`ACC-01` 已完成，`ACC-02` 自愈状态机尚未排期，本任务线暂停。后续需要实现 watchdog/自愈状态机时再恢复。
 
 1. 下一步优先推进 `ACC-02`：补齐短窗口恢复、退避重试、健康心跳与 watchdog。
 2. 然后推进 `ACC-03/ACC-04`：把剩余入口统一接入状态机，并补齐一致性断开态与人工修复提示。

@@ -8,11 +8,19 @@
 		  :END:
 			- 代码开发自测及问题修复
 			- 修改数据库，新增数据表
--
+- gpt4接口地址
+	- bigmodel:
+		- driver: chatGPT4
+		- appKey: a4f2e7d9-8c1b-4567-890a-bcdef1234567
+		- appSecret: 5f8d2c7b-1a34-5678-b2c1-0123456789ab7d6e5f4c
+		- endpoint: http://rpa-algo-chat:8080/openApi/agent/chatGpt/call
 - mysql
 	- qa
 	- 生产
 - kubectl
+	- 本地配置方法
+		- 1.在~/kube/config 中写入配置
+		- 2.export KUBECONFIG=./kubeconfig
 	- 日志查看
 		- kubectl -n qa get po | grep rpa-mobile-agent-web
 		- kubectl -n qa logs -f rpa-mobile-agent-web-68bcf69f6-5nhxt

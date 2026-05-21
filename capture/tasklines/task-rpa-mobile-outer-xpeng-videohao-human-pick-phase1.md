@@ -4,8 +4,8 @@
 - project_id: `rpa-mobile`
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
-- status: `in_progress`
-- updated_at: `2026-03-11 19:20 +0800`
+- status: `done`
+- updated_at: `2026-04-16 18:56 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -27,6 +27,8 @@
 8. `s2` 真机探针已验证视频号回调口径：`articleData/commentData` 现直接挂在 `actResultList` 对应 act，且 `snapshot` 返回完整 OSS 可访问 URL。
 
 ## 下一步
+
+> 2026-04-16 路由收口：本任务线已归档。视频号 DTO/callback/snapshot 与主要 selector 策略已完成；后续视频号稳定性问题走 `rpa-mobile/outer/xpeng-stable-baseline`，图片评论新能力走 `rpa-mobile/outer/xpeng-image-comment-human-test-phase1`。
 
 1. Backbone：继续基于当前正式代码回归 `21/31/32/41/51`，重点看真实业务数据、评论阶段信号与页面态漂移。
 2. Backbone：后续 stop/复跑默认沿用正式 `project/app.py` + 已升级运行时，不再切回临时入口验证。

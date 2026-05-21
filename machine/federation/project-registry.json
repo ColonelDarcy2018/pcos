@@ -3,6 +3,20 @@
   "updated_at": "2026-03-03T10:52:57+00:00",
   "projects": [
     {
+      "project_id": "void",
+      "repo_root": "/Users/zhuxiaowei/apps/void",
+      "enabled": true,
+      "default_branch": "main",
+      "ccos_nodes": [
+        {
+          "node_id": "default",
+          "ccos_root": "CCOS",
+          "scope": "repo",
+          "enabled": true
+        }
+      ]
+    },
+    {
       "project_id": "rpa-mobile",
       "repo_root": "/Users/zhuxiaowei/apps/rpa-mobile",
       "enabled": true,

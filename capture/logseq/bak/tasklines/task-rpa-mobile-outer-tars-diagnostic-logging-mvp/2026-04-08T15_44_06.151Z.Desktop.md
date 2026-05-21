@@ -1,0 +1,48 @@
+# 塔斯 App 诊断日志与平台态可观测性 MVP
+
+- taskline_id: `rpa-mobile/outer/tars-diagnostic-logging-mvp`
+- project_id: `rpa-mobile`
+- repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
+- ccos_node: `outer`
+- status: `active`
+- updated_at: `2026-04-08 11:35 +0800`
+- updated_by: `codex(agent-codex-main)`
+
+## 背景
+
+项目内原始任务文档：
+`/Users/zhuxiaowei/apps/rpa-mobile/CCOS/context/task-tars-diagnostic-logging-mvp.md`。
+
+项目内知识基线：
+`/Users/zhuxiaowei/apps/rpa-mobile/CCOS/knowledge/business-logic/tars-diagnostic-logging-logic.md`。
+
+该任务线用于沉淀“塔斯 App 运行态 durable 诊断证据”最小闭环，目标是在不重写现有日志平台的前提下，补齐平台事件历史、最近平台状态快照和最小导出接口，让后续 AI 能准确复盘悬浮窗失活、无障碍掉线和前台 App 漂移问题。
+
+## 当前同步结论（摘要）
+
+1. 第一个 MVP 已落地：`platform_events/*.jsonl`、`latest_state.json`、关键运行态挂点与最小 HTTP 导出接口均已接入。
+2. 第一批事件源已覆盖前台组件、无障碍生命周期、悬浮窗、Agent 状态、platform prepare 与 crash。
+3. `HttpServer` 已新增“最近状态”“最近事件”读取接口，并在 `platform_info` 里声明新 capability。
+4. `ZFilePrinter` 的 socket 日志命名和清理遗漏已作为低风险卫生补丁一并修复。
+5. 已完成基础验证：Android `originDebug` 编译成功，`CCOS sync` 和仓库约定检查通过。
+6. 已完成 `s2` 真机回归：新 capability 可见，接口可用，设备侧 `latest_state.json` 与 `events/*.jsonl` 已真实落盘，且成功记录“设置页 -> 塔斯”前台切换事件。
+7. 新观察点是前台组件流里会包含塔斯内部 `android.app.Dialog` 切换；若后续用于业务守卫，需要先明确过滤策略。
+8. 已澄清“小鹏项目守卫”不是本任务线已完成的塔斯能力；当前工作树里可见的 `wechat_runtime_guard` 仅是 `xp-wx1-simplified/videohao` 局部业务护栏，不能直接视为项目级统一落地。
+9. 主机侧已补齐“客户执行脚本产 zip -> 支持侧离线分析”的外层闭环：`collect_device_diagnostics.py` 与 `analyze_diagnostic_bundle.py` 已落地，并完成 `s2` 真机闭环验证。
+10. 主机侧闭环已完成第二批增强：客户脚本默认不直接拉 App 私有目录，转而固定采集 ADB 公共快照、设备 HTTP/daemon 导出；同时补了网络环境快照、`platform_commander_state` / `platform_diagnostics_state` / `platform_diagnostics_events` 与 `network_trace_excerpt`。
+11. 离线分析脚本已能结合 commander durable replay 摘要做三段式定责：`client_network_issue`、`result_delivery_issue`、`platform_side_suspected`，把“结果丢失”从模糊判断升级成更稳定的证据链判断。
+
+## 下一步
+
+1. 本任务线的 MVP 证据链已在 `s2` 真机验证通过；若继续推进“异常切出微信 fail-fast”，建议从现有 `videohao` 守卫抽象统一入口，而不是重复发明新机制。
+2. 守卫接入前先确定前台事件过滤规则，避免把塔斯内部 `Dialog` 变化或系统弹窗误判成异常切出。
+3. 后续按需推进 `JobRecoder` 增量刷盘、真实失败样本回归，以及诊断 bundle / 开发平台消费能力继续收口。
+4. 若要继续减少“平台丢结果”争议，优先补 commander 状态接口中的 `lastReportSuccessAt/lastReportAckCode/lastReplaySuccessAt` 等成功确认信号。
+
+## Progress Log
+- 2026-04-03 15:51 +0800 已创建塔斯诊断日志 MVP 任务线，并同步项目任务文档、知识基线与流程图；冻结“durable 平台事件 + 最新状态快照 + 最小导出接口 + 关键运行态挂点”的增量实现方向
+- 2026-04-03 16:12 +0800 已完成 Android MVP 首版：`PlatformDiagnostics`、关键运行态事件、`HttpServer` 导出接口与 `ZFilePrinter` 卫生补丁均已落地；`originDebug` 编译成功，`CCOS sync` 与仓库约定检查通过
+- 2026-04-03 17:44 +0800 已在 `s2` 真机回归确认 durable 证据链：新 capability 可见，接口可用，设备文件真实落盘，并成功记录“设置页 -> 塔斯”前台切换事件
+- 2026-04-07 10:51 +0800 已同步文档与任务线状态，澄清“小鹏项目守卫”是业务层 fail-fast 护栏；当前工作树可见的实现主要落在 `xp-wx1-simplified/videohao`，尚未确认项目级统一覆盖
+- 2026-04-07 16:21 +0800 已补齐主机侧诊断包采集/离线分析脚本，并在 `s2` 完成“真实任务 -> 诊断包 -> 离线分析”闭环验证；成功样本已能优先收敛为 `execution_success`
+- 2026-04-08 11:35 +0800 已完成第二批诊断增强同步：客户脚本边界冻结为“不直接拉 App 私有目录”，采集脚本补网络快照、commander/diagnostics 状态与 trace 摘录；Android `/api/platform_commander_state` 暴露 durable replay 摘要，离线分析脚本已可输出 `client_network_issue / result_delivery_issue / platform_side_suspected` 三段式结论

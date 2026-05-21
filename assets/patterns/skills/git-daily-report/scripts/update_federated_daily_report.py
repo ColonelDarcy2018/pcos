@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate federated daily report with Commit-First and Diff-Fallback strategy."""
+"""Generate federated daily report from project commits with optional diff fallback."""
 
 from __future__ import annotations
 
@@ -20,7 +20,11 @@ NEXT_PATTERN = re.compile(
     r"^\s*(?:next|todo|next_actions|明日任务|下一步)\s*[:：]\s*(.+?)\s*$",
     re.IGNORECASE,
 )
-COMMIT_TEMPLATE = """taskline_id: <project/taskline>
+HOURS_FIELD_PATTERN = re.compile(
+    r"^\s*(?:hours|工时|耗时|duration)\s*[:：]\s*([0-9]+(?:\.[0-9]+)?)\s*(?:h\b|小时)?\s*$",
+    re.IGNORECASE,
+)
+COMMIT_TEMPLATE = """taskline_id: <project_id/ccos_node/task_slug>
 work_summary: <本次工作摘要>
 next: <下一步动作>
 hours: <1.5h>"""
@@ -68,6 +72,12 @@ class ProjectSnapshot:
     error: str | None = None
 
 
+@dataclass
+class TasklineCatalog:
+    known_ids: set[str]
+    alias_by_project_slug: dict[tuple[str, str], str]
+
+
 def run_cmd(cwd: pathlib.Path, *args: str, allow_fail: bool = False) -> CmdResult:
     proc = subprocess.run(
         args,
@@ -91,6 +101,17 @@ def parse_date(raw: str | None) -> dt.date:
 
 def normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip()).strip(" -:：")
+
+
+def strip_ticks(value: str) -> str:
+    value = value.strip()
+    if value.startswith("`") and value.endswith("`") and len(value) >= 2:
+        return value[1:-1]
+    return value
+
+
+def split_markdown_row(line: str) -> list[str]:
+    return [cell.strip() for cell in line.strip().strip("|").split("|")]
 
 
 def unique_keep_order(items: list[str]) -> list[str]:
@@ -121,18 +142,57 @@ def parse_hours_from_text(text: str) -> float | None:
         line = raw.strip()
         if not line:
             continue
-        low = line.lower()
-        if not any(key in low for key in ("hours", "工时", "耗时", "duration")):
-            continue
-
-        m_h = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*h\b", line, re.IGNORECASE)
-        if m_h:
-            return float(m_h.group(1))
-
-        m_cn = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*小时", line)
-        if m_cn:
-            return float(m_cn.group(1))
+        match = HOURS_FIELD_PATTERN.match(line)
+        if match:
+            return float(match.group(1))
     return None
+
+
+def load_taskline_catalog(ccos_root: pathlib.Path) -> TasklineCatalog:
+    task_index = ccos_root / "capture" / "tasklines" / "task-index.md"
+    if not task_index.exists():
+        return TasklineCatalog(known_ids=set(), alias_by_project_slug={})
+
+    known_ids: set[str] = set()
+    alias_candidates: dict[tuple[str, str], set[str]] = {}
+    for raw in task_index.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line.startswith("|"):
+            continue
+        cells = split_markdown_row(line)
+        if not cells or cells[0] in {"taskline_id", "---"}:
+            continue
+        taskline_id = strip_ticks(cells[0])
+        if not taskline_id:
+            continue
+        known_ids.add(taskline_id)
+        parts = taskline_id.split("/", 2)
+        if len(parts) != 3:
+            continue
+        key = (parts[0], parts[2])
+        alias_candidates.setdefault(key, set()).add(taskline_id)
+
+    alias_by_project_slug = {
+        key: next(iter(values)) for key, values in alias_candidates.items() if len(values) == 1
+    }
+    return TasklineCatalog(known_ids=known_ids, alias_by_project_slug=alias_by_project_slug)
+
+
+def canonicalize_taskline_id(taskline_id: str | None, catalog: TasklineCatalog) -> str | None:
+    if not taskline_id:
+        return None
+    normalized = normalize_text(taskline_id)
+    if not normalized:
+        return None
+    if normalized in catalog.known_ids:
+        return normalized
+
+    parts = normalized.split("/")
+    if len(parts) == 2:
+        candidate = catalog.alias_by_project_slug.get((parts[0], parts[1]))
+        if candidate:
+            return candidate
+    return normalized
 
 
 def load_registry(path: pathlib.Path) -> dict:
@@ -197,7 +257,11 @@ def parse_git_status_lines(status_text: str) -> tuple[int, int, int, int, int, l
     return changed_files, modified, added, deleted, renamed, conflicted, sample_files
 
 
-def collect_commit_digests(repo_root: pathlib.Path, report_date: dt.date) -> tuple[list[CommitDigest], str | None]:
+def collect_commit_digests(
+    repo_root: pathlib.Path,
+    report_date: dt.date,
+    taskline_catalog: TasklineCatalog,
+) -> tuple[list[CommitDigest], str | None]:
     start = dt.datetime.combine(report_date, dt.time.min)
     end = start + dt.timedelta(days=1)
 
@@ -231,7 +295,7 @@ def collect_commit_digests(repo_root: pathlib.Path, report_date: dt.date) -> tup
         for raw in body.splitlines():
             match = TASKLINE_PATTERN.match(raw)
             if match:
-                taskline = normalize_text(match.group(1))
+                taskline = canonicalize_taskline_id(match.group(1), taskline_catalog)
                 break
 
         next_items: list[str] = []
@@ -265,7 +329,12 @@ def collect_commit_digests(repo_root: pathlib.Path, report_date: dt.date) -> tup
     return digests, None
 
 
-def collect_snapshot(project_id: str, repo_root: pathlib.Path, report_date: dt.date) -> ProjectSnapshot:
+def collect_snapshot(
+    project_id: str,
+    repo_root: pathlib.Path,
+    report_date: dt.date,
+    taskline_catalog: TasklineCatalog,
+) -> ProjectSnapshot:
     if not repo_root.exists():
         return ProjectSnapshot(
             project_id=project_id,
@@ -342,7 +411,7 @@ def collect_snapshot(project_id: str, repo_root: pathlib.Path, report_date: dt.d
         status.stdout
     )
 
-    commits, log_error = collect_commit_digests(repo_root, report_date)
+    commits, log_error = collect_commit_digests(repo_root, report_date, taskline_catalog)
     commit_samples = [trim_text(item.subject, 72) for item in commits[:2] if item.subject]
     commit_tasklines = unique_keep_order(
         [item.taskline_id for item in commits if item.taskline_id]
@@ -401,18 +470,16 @@ def evaluate_commit_meta(snapshots: list[ProjectSnapshot], mode: str) -> bool:
     return mode == "strict"
 
 
-def build_done_items(snapshots: list[ProjectSnapshot], index_aggregated: bool) -> list[str]:
-    total = len(snapshots)
-    healthy = sum(1 for item in snapshots if item.ok)
+def build_done_items(
+    snapshots: list[ProjectSnapshot], index_aggregated: bool, prefer: str
+) -> list[str]:
     committed = [item for item in snapshots if item.ok and item.commit_count > 0]
-    diff_fallback = [item for item in snapshots if item.ok and item.commit_count == 0 and item.changed_files > 0]
-    blocked = [item for item in snapshots if not item.ok]
-
-    done = [
-        f"联邦扫描 {total} 个项目（可访问 {healthy} 个），其中 {len(committed)} 个项目今日有提交。"
-    ]
-    if index_aggregated:
-        done.append("已刷新联邦 CCOS 索引（ccos-index-federated.json）。")
+    diff_fallback: list[ProjectSnapshot] = []
+    if prefer == "commit-first":
+        diff_fallback = [
+            item for item in snapshots if item.ok and item.commit_count == 0 and item.changed_files > 0
+        ]
+    done: list[str] = []
 
     for item in sorted(committed, key=lambda x: x.commit_count, reverse=True)[:5]:
         summary = "；".join(item.commit_samples) if item.commit_samples else "无提交摘要"
@@ -421,20 +488,52 @@ def build_done_items(snapshots: list[ProjectSnapshot], index_aggregated: bool) -
 
     for item in sorted(diff_fallback, key=lambda x: x.changed_files, reverse=True)[:3]:
         samples = "、".join(item.sample_files) if item.sample_files else "无示例文件"
-        done.append(
-            f"{item.project_id}：无今日提交，回退到 git diff 检测 {item.changed_files} 项改动（示例：{samples}）。"
-        )
+        done.append(f"{item.project_id}：当前收敛了 {item.changed_files} 项未提交改动（示例：{samples}）。")
 
-    for item in blocked[:3]:
-        done.append(f"{item.project_id}：扫描失败（{item.error}）。")
+    if not done:
+        if prefer == "commit-only":
+            done.append("今日暂无纳管项目已提交产出。")
+        else:
+            done.append("今日暂无纳管项目可汇总产出。")
 
     return done[:9]
 
 
-def build_todo_items(snapshots: list[ProjectSnapshot]) -> list[str]:
-    todos = unique_keep_order([todo for item in snapshots for todo in item.next_items])
+def build_execution_notes(
+    snapshots: list[ProjectSnapshot], index_aggregated: bool, prefer: str
+) -> list[tuple[str, str]]:
+    total = len(snapshots)
+    healthy = sum(1 for item in snapshots if item.ok)
+    committed = [item for item in snapshots if item.ok and item.commit_count > 0]
+    blocked = [item for item in snapshots if not item.ok]
+    notes: list[tuple[str, str]] = [
+        ("INFO", f"联邦扫描 {total} 个项目（可访问 {healthy} 个），其中 {len(committed)} 个项目今日有提交。")
+    ]
+    if index_aggregated:
+        notes.append(("INFO", "已刷新联邦 CCOS 索引（ccos-index-federated.json）。"))
+    if prefer == "commit-only":
+        notes.append(("INFO", "联邦正文仅纳入项目当日提交，未写入各仓当前未提交改动。"))
+    else:
+        notes.append(("INFO", "联邦正文允许对无提交项目使用 git diff 回退。"))
+    for item in blocked[:3]:
+        notes.append(("WARN", f"{item.project_id}：扫描失败（{item.error}）。"))
+    return notes
+
+
+def build_todo_items(snapshots: list[ProjectSnapshot], prefer: str) -> list[str]:
+    committed = [item for item in snapshots if item.ok and item.commit_count > 0]
+    todos = unique_keep_order([todo for item in committed for todo in item.next_items])
     if todos:
         return todos[:6]
+
+    if prefer == "commit-only":
+        if committed:
+            result = [
+                f"继续推进 {item.project_id} 当日已提交任务线的后续收口与验证。"
+                for item in sorted(committed, key=lambda x: x.commit_count, reverse=True)[:6]
+            ]
+            return unique_keep_order(result)[:6]
+        return ["今日无项目提交，继续推进当前任务并在形成阶段成果后提交以纳入日报。"]
 
     changed = [item for item in snapshots if item.ok and item.changed_files > 0]
     if not changed:
@@ -557,7 +656,7 @@ def aggregate_index_if_needed(ccos_root: pathlib.Path, skip: bool) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate federated daily report with Commit-First and Diff-Fallback strategy."
+        description="Generate federated daily report with user-facing content and separate execution notes."
     )
     parser.add_argument("--ccos-root", default=".", help="CCOS repository root path.")
     parser.add_argument(
@@ -570,6 +669,12 @@ def main() -> int:
         "--journal-root",
         default="capture/journals",
         help="Journal directory relative to CCOS root.",
+    )
+    parser.add_argument(
+        "--prefer",
+        choices=["commit-only", "commit-first"],
+        default="commit-only",
+        help="Federated report source priority. Default: commit-only.",
     )
     parser.add_argument("--print-only", action="store_true", help="Only print report.")
     parser.add_argument(
@@ -614,14 +719,23 @@ def main() -> int:
     report_date = parse_date(args.date)
     registry = load_registry(registry_path)
     projects = collect_projects(registry)
-    snapshots = [collect_snapshot(project_id, repo_root, report_date) for project_id, repo_root in projects]
+    taskline_catalog = load_taskline_catalog(ccos_root)
+    snapshots = [
+        collect_snapshot(project_id, repo_root, report_date, taskline_catalog)
+        for project_id, repo_root in projects
+    ]
     if evaluate_commit_meta(snapshots, args.commit_meta_mode):
         return 3
     index_aggregated = aggregate_index_if_needed(ccos_root, args.skip_index_aggregation)
 
-    done = build_done_items(snapshots, index_aggregated=index_aggregated)
-    todo = build_todo_items(snapshots)
+    done = build_done_items(snapshots, index_aggregated=index_aggregated, prefer=args.prefer)
+    todo = build_todo_items(snapshots, prefer=args.prefer)
     hours = build_hours_text(snapshots)
+    execution_notes = build_execution_notes(
+        snapshots, index_aggregated=index_aggregated, prefer=args.prefer
+    )
+    for level, note in execution_notes:
+        print(f"[{level}] {note}", file=sys.stderr)
     report_text = build_markdown(done, todo, hours)
     print(report_text)
 

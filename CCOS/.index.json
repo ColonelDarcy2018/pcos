@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-03T12:08:33+00:00",
+  "generated_at": "2026-04-09T03:26:25+00:00",
   "ccos_root": "CCOS",
   "stats": {
     "docs": 10,
@@ -56,7 +56,7 @@
         "../../protocol/multi-ai-collaboration.md"
       ],
       "has_ccos_index": true,
-      "updated_at": "2026-03-03T12:07:20.827435+00:00"
+      "updated_at": "2026-04-09T03:26:13.283244+00:00"
     },
     {
       "path": "CCOS/knowledge/architecture/remote-codex-control-mvp.md",

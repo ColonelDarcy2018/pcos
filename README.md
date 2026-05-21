@@ -84,6 +84,7 @@ CCOS 作为全局中枢，采用“联邦模式”管理多项目：
 
 - `workflows/federated-sync.md`
 - `workflows/federated-daily-report.md`
+- `workflows/federated-self-evolution.md`
 - 统一协议：`meta/ccos-unified-protocol.md`
 
 ## 演进原则（如何长期维护）

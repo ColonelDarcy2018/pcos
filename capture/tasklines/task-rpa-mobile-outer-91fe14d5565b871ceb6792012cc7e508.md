@@ -1,0 +1,206 @@
+# 公众号账号采集失败（workId=91fe14d5565b871ceb6792012cc7e508）
+
+- taskline_id: `rpa-mobile/outer/91fe14d5565b871ceb6792012cc7e508`
+- project_id: `rpa-mobile`
+- repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
+- ccos_node: `outer`
+- status: `done`
+- updated_at: `2026-04-22 16:11 +0800`
+- updated_by: `codex(agent-codex-main)`
+
+## 背景
+
+1. 本任务线用于单独保存公众号账号采集失败样本 `workId=91fe14d5565b871ceb6792012cc7e508` 的排查上下文。
+2. 该样本来自用户反馈“之前也有这个问题，已修复了还是出现”，需要明确：
+   - 当前是否还是同一个已修复问题；
+   - 当前是否属于常见“网络加载慢 / 页面等待超时”类故障。
+3. 项目内父任务仍归属小鹏稳定基线：
+   - `/Users/zhuxiaowei/apps/rpa-mobile/CCOS/context/task-xpeng-stable-baseline.md`
+
+## 当前收口结论（2026-04-22 16:11 +0800）
+
+1. 本轮已按更严格的“完整链路验收”口径，重新用云端原始 `workId=91fe14d5565b871ceb6792012cc7e508` payload 在 `s2(WKDAUGWGEA75KRCM)` 发起 full-chain 真机回放：
+   - `job_id=mcppkg_20260422_152741_157285_eeec18cf`
+   - 录屏文件：`/Users/zhuxiaowei/apps/rpa-mobile/rpa-dev-platform/daemon/recordings/screenrecord_WKDAUGWGEA75KRCM_91fe-fullchain-v4_20260422_152741_9585f4f3.mp4`
+   - 本地 seed/mock 记录：`/Users/zhuxiaowei/apps/rpa-mobile/examples/mobile-rpa-cases/cases/common_mock_callback_service/out/2026-04-22/2026-04-22T15-33-10_89579e5b5140415185b5970a63c25fe5.json`
+2. 这次不能再只写成“手机侧无报错”。已证实手机侧最终结果体真的写入了结果数据，并成功转交下游 PC：
+   - `2026-04-22 15:33:17 +0800` 手机侧日志已打印 `流程结果摘要` 与 `流程结果返回体`；
+   - `actType=41` 最终 `status=1 / resultRowCount=3 / articleCount=3 / accountCount=3 / articleSignCount=3`；
+   - 手机侧随后执行 `[GZH_FORWARD]`，创建下游 `workUuid=1fcc386f122f97b99b37480416b285da`、`workExecuteUuid=b2235a4b46f23282e719e47ff74c3ffc`；
+   - 手机侧按当前契约 `skip_callback=true`，因此本地 mock 没有命中 `/callback/gongzhonghao-41-91fe-fullchain-v4`，这次不再视为异常。
+3. 下游 PC 这次也已联查到终态，不再停留在“手机提交成功”：
+   - `workUuid=1fcc386f122f97b99b37480416b285da` 的云端日志显示 `2026-04-22 15:34:12 +0800` 已完成对客 callback，HTTP 返回 `200`；
+   - `2026-04-22 15:34:15 +0800` 云端记录 `运行结束 / Engine执行完成 / 机器人运行结束`；
+   - 下游 callback 结果体里的 `articleData` 已补齐 `title/content/images`，不再只是手机侧 seed。
+4. “为什么不是 5 条”这次也已有硬证据，原因是“重复项 + 时间阈值”叠加，不是“手机没写结果体”：
+   - `2026-04-22 15:32:51 +0800` 手机侧明确打出 `文章链接已采集，跳过重复项：https://mp.weixin.qq.com/s/fD8RJQl_MkbRexlIuTEmjg`；
+   - `2026-04-22 15:33:10 +0800` 又明确打出 `后续文章发布时间都早于你输入的发布时间`；
+   - 因此本轮真实终态应收口为：请求 `nums=5`，最终仅有 `3` 条唯一且满足 `pubTimeGe=2026-04-13 11:07:00 +0800` 的文章进入结果体。
+5. 这次顺带确认了录屏“提前结束”不是坏文件，也不是 daemon 提前 stop，而是命中了当前默认时长上限：
+   - 该 mp4 `ffprobe` 时长约 `178.98s`，与 daemon 当前 `recording_max_duration_ms` 默认 `180000` 高度一致；
+   - 本次 full-chain 真实业务结束时间从 `15:27:41` 到 `15:33:17`，约 `335s`，明显长于默认 3 分钟；
+   - 因本次回放未显式传 `recording_max_duration_ms`，所以录屏虽可正常打开，但只能录到前半段，属于“被默认上限正常截断”，不是录屏后端故障。
+6. 当前对这条样本更准确的收口是：
+   - 公众号 `41` 原始业务问题已按原始 payload 做到“手机侧结果体正确 + 下游 PC 成功补齐 + 最终 callback 成功”的完整链路回归通过；
+   - 但本轮也新增冻结了一条验收规则：后续不能再用“无报错”代替成功，且长于 3 分钟的人工回看录屏必须显式提高 `recording_max_duration_ms`。
+
+## 当前收口结论（2026-04-22 14:37 +0800）
+
+1. 已按云端原始 `workId=91fe14d5565b871ceb6792012cc7e508` payload，在 `s2(WKDAUGWGEA75KRCM)` 上用当前代码完成两轮真机回放，手机侧原始失败主因已不再复现：
+   - `v3` 回放：`job_id=mcppkg_20260422_142807_725427_3e239591`
+   - `v4` 回放：`job_id=mcppkg_20260422_143501_842238_225b2b22`
+2. `v3` 已证实旧 `get_link_in_platform(...)` 崩点 `NoneType.child / NoneType.text` 都消失，手机侧能正常展开“置顶 2 个内容”并成功把结果转交给 PC：
+   - 日志出现 `公众号置顶聚合折叠态展开：summary=2个内容`
+   - 终态 `status=1/failReason=0`
+   - 手机侧 `skip_callback=true`，本地 mock 没有命中 `/callback/gongzhonghao-41-91fe-replay-v3`，这是当前契约预期，不再视为异常
+3. 结合现场页面结构继续复核后，发现 `v3` 版本只把“置顶展开区”纳入遍历，仍可能漏掉其下方普通文章行；因此本轮继续把“置顶展开内嵌文章 + 下方普通文章行”并入同一轮列表遍历，再跑 `v4` 原始 payload 回放确认。
+4. `v4` 已证实这条页面兼容补齐到位：
+   - 置顶展开后，日志从旧的 `2` 个候选提升到 `4` 个候选；
+   - 依次出现 `已复制1条记录 / 已复制2条记录 / 已复制3条记录 / 已复制4条记录`，说明置顶区下方普通文章行也进入了同一轮遍历；
+   - 整个手机侧流程仍正常结束并成功转交 PC，没有再出现历史空指针异常。
+5. 当前可以把这条子样本从“已解决（未回归）”升级为“已解决（原始 payload 真机回归通过，手机侧）”，但边界要写清：
+   - 本轮已确认手机侧原始失败问题与置顶结构兼容问题都已修住；
+   - 本轮没有继续联查下游 PC `workUuid=ef4aee2eb2ecdfd16b2e60d0d0249f02` 的最终结果，因此结论范围限定在“手机侧原始失败已解决并已回归验证”。
+6. 当前关键证据：
+   - `v3` 录屏：`/Users/zhuxiaowei/apps/rpa-mobile/rpa-dev-platform/daemon/recordings/screenrecord_WKDAUGWGEA75KRCM_91fe-replay-current-code-v3_20260422_142807_871c4ede.mp4`
+   - `v4` 录屏：`/Users/zhuxiaowei/apps/rpa-mobile/rpa-dev-platform/daemon/recordings/screenrecord_WKDAUGWGEA75KRCM_91fe-replay-current-code-v4_20260422_143502_31e073c9.mp4`
+   - `v4` 录屏 `ffprobe` 已确认可读，时长约 `109.81s`
+
+## 当前收口结论（2026-04-22 10:55 +0800）
+
+1. 原始云端样本 `workId=91fe14d5565b871ceb6792012cc7e508` 的首个真实异常，现已和 `2026-04-16 11:10:04 +0800` 的云端 engine log 对齐：
+   - `AttributeError: 'NoneType' object has no attribute 'child'`
+   - 落点在当时 runtime `20260416_110719_851/project/gongzhonghao/main.py` 的 `get_link_in_platform(...)`
+   - 直接触发点是旧列表标题读取链路里的硬编码 `child().child()` 结构，不是当前任务线正文里后续 mock 回放暴露出来的 `amx.click`。
+2. 本任务线正文保留的 `NoneType.click`，是 `2026-04-16` 同日用相同任务语义在 `s2 / WKDAUGWGEA75KRCM` 做 mock 真机回放时暴露出来的 sibling 分支：
+   - 原始 `NoneType.child` 已被绕开；
+   - 但旧版 `get_user1()` 仍存在 `zbot.selector().id("amx").findOne(3000).click()`，因此继续暴露了公众号主页详情入口兼容不足。
+3. 到当前仓代码为止，这两层历史脆弱点都已有明确修复轨迹：
+   - `758429a3` 已把文章列表标题解析从硬编码 `child().child()` 链收口为 `_extract_article_title_from_list_container(...) + _pick_best_article_title_candidate(...)` 的安全解析，并补了兜底测试。
+   - `9eaa8379` 已先移除 `get_user1()` 对 `amx` 的硬点击，改为可空 fallback；`03e6738e` 又把正式 `userCode` 入口冻结为 `头像 -> 资料详情页 -> 微信号` 链路，不再把 `amx/sj3` 这类短 id 当正式 selector。
+4. 当前本地验证已确认相关保护测试通过：
+   - `test_gongzhonghao_main_extract_article_title_from_list_container_uses_fallback_scan`
+   - `test_gongzhonghao_read_user_id_from_profile_page_reads_wechat_id`
+   - `test_gongzhonghao_get_user_id_restores_article_page_after_lookup`
+5. 本条单样本子线当前可按 `已解决（未回归）` 收口：
+   - “已解决”依据是：原始 `NoneType.child` 与后续 `NoneType.click` 两条同族脆弱点都已在当前代码中有针对性修复，并存在历史真机/回放证据与当前本地保护测试支撑。
+   - “未回归”是指：本轮没有再用原始 `workId=91fe14d5565b871ceb6792012cc7e508` 的原样 payload 在当前代码上补做一次独立真机回放，因此不写成“当前代码已按原样 payload 真机复现并验证通过”。
+6. 后续若再出现同类公众号 `41` 样本，应优先按两层拆解：
+   - 先看是不是旧文章列表结构解析又回退成 `NoneType.child`；
+   - 再看是不是资料详情入口又回退成短 id / `amx` 硬点击。
+
+## 当前收口结论（2026-04-22 12:12 +0800）
+
+1. `91fe` 这次真机回放附带的长录屏文件“打不开”，已确认不是播放器兼容问题，而是当时 `rpa-dev-platform` 长录屏 `continuous` 后端的收口缺陷：
+   - 旧逻辑在长录屏停止时优先对本地 `adb shell screenrecord --time-limit 0` 子进程发 `SIGINT`；
+   - 现场坏文件里 `mdat` 的 64 位长度字段仍停留在占位值 `0x3f3f3f3f3f3f3f3f`，部分短录屏甚至直接缺少 `moov`；
+   - 旧逻辑又只按“文件大小 > 0”判成功，所以会把不可读 mp4 误记成成功录屏。
+2. 当前代码已补两层修复：
+   - `rpa-dev-platform/daemon/core/device_manager.py` 现改为长录屏停止时优先请求设备侧 `screenrecord` 自然结束，再等待 `adb` 子进程退出，不再优先直接打断本地 `adb`；
+   - 录屏拉回本地后，新增 MP4 容器校验与 `continuous` 坏头修复；可修时自动回填 `mdat` 长度，不可修时明确标为失败，不再按“有文件就算成功”放过。
+3. 现场已有两条验证证据：
+   - 历史坏文件 `/Users/zhuxiaowei/apps/rpa-mobile/rpa-dev-platform/daemon/recordings/screenrecord_WKDAUGWGEA75KRCM_91fe-replay-current-code_20260422_114541_91804792.mp4` 已用新逻辑原地修复，`ffprobe` 现可正常读取，时长约 `93.4s`；
+   - `2026-04-22 12:09 +0800` 用当前代码在 `s2 / WKDAUGWGEA75KRCM` 做了最小真机回归：
+     - 录屏会话 `screenrec_20260422_120932_754839_a167ac41`
+     - 输出文件 `/Users/zhuxiaowei/apps/rpa-mobile/recordings/screenrecord_WKDAUGWGEA75KRCM_codex-rec-fix-e2e-v2_20260422_120932_a167ac41.mp4`
+     - `ffprobe` 已确认该文件可直接打开。
+4. 同轮还顺手收口了 mock 截图联调的可读性问题：
+   - 旧 mock 只把 `image/png` 请求体按 `body_base64` 存在 `.json` 里，不方便直接人工查看；
+   - 当前 `common_mock_callback_service` 已改为：保留 JSON/base64 原始证据，同时自动落一份真实图片侧车文件，并在原始 `.json` 里回填 `decoded_body_file`。
+5. 当前这条 `91fe` 回放样本的失败截图上传记录已回填成可直接打开的 PNG：
+   - 原始记录：`/Users/zhuxiaowei/apps/rpa-mobile/examples/mobile-rpa-cases/cases/common_mock_callback_service/out/2026-04-22/2026-04-22T11-47-13_6cdf7dd465be4f4199bf677103c48924.json`
+   - 对应图片：`/Users/zhuxiaowei/apps/rpa-mobile/examples/mobile-rpa-cases/cases/common_mock_callback_service/out/2026-04-22/2026-04-22T11-47-13_6cdf7dd465be4f4199bf677103c48924_body.png`
+6. 因此当前口径可收口为：
+   - `91fe` 的业务主因仍是公众号 `41` 历史 `NoneType.child / NoneType.click` 那条老主线，和录屏坏文件不是同一个业务 bug；
+   - 但本轮排障顺带证实并修复了平台录屏收口缺陷，以及 mock 截图仅 base64 落盘的人机可读性缺口。
+
+## 当前结论（2026-04-16 16:47 +0800）
+
+1. 当前代码下，历史云端样本里的旧崩点 `AttributeError: 'NoneType' object has no attribute 'child'` 已不再复现。
+2. `s2(WKDAUGWGEA75KRCM)` 上用同一任务语义做的 mock 真机回放，暴露出了同一条公众号 `21/41` 老主线里的另一处分支问题：
+   - `AttributeError: 'NoneType' object has no attribute 'click'`
+   - 栈落点在 `examples/mobile-rpa-cases/cases/xp-wx1-simplified/project/gongzhonghao/main.py` 的 `get_user1()`：
+     - `zbot.selector().id("amx").findOne(3000).click()`
+3. 这次故障不属于典型“网络加载慢 -> 等待超时”：
+   - 失败前页面主体内容已经实际加载出来；
+   - 日志已经打印出账号摘要；
+   - mock 截图能看到公众号主页、账号信息和文章列表；
+   - 最终异常是“脚本直接点击了一个不存在的控件”，不是 `findOneEnsure(..., timeout)` 或页面等待超时报错。
+4. “网络慢”最多只能算次级诱因假设，当前主因判断应收口为：
+   - 公众号主页当前布局分支下不存在 `amx` 控件；
+   - 老脚本对该控件做了硬点击，缺少布局兼容与空值兜底。
+
+## 关键证据
+
+1. mock readiness 四步已闭环：
+   - 本机 `GET http://127.0.0.1:18888/health` 成功；
+   - 本机 `POST /callback/selftest` 成功落盘；
+   - `adb reverse tcp:18888 tcp:18888` 已重打；
+   - 设备探针 `job_id=mcpjob_20260416_142011_912746_51737b16` 在 `2026-04-16 14:20:12 +0800` 成功命中 `/health` 与 `/callback/device-probe`。
+2. 正式 mock 回放任务：
+   - `job_id=mcppkg_20260416_142051_178411_b94b36a8`
+   - 开始：`2026-04-16 14:20:51 +0800`
+   - 结束：`2026-04-16 14:22:05 +0800`
+3. 关键运行证据：
+   - `2026-04-16 14:21:48 +0800` 日志已打印：
+     - `小鹏汽车 公众号 广州橙行智动汽车科技有限公司 账号描述: 未来出行探索者 88篇原创内容 17小时前更新`
+   - `2026-04-16 14:22:00 +0800` 日志抛出：
+     - `[PLAN_EXCEPTION] AttributeError: 'NoneType' object has no attribute 'click'`
+     - 栈链为 `fields_related_to_account_collection -> open_wechat_and_enter_search_play_page -> get_link_in_platform -> get_user1`
+   - `2026-04-16 14:22:04 +0800` mock callback 已收到失败结果体；
+   - `2026-04-16 14:22:03 +0800` mock snapshot 已收到失败截图上传。
+4. 证据文件：
+   - snapshot mock 记录：
+     - `/Users/zhuxiaowei/apps/rpa-mobile/examples/mobile-rpa-cases/cases/common_mock_callback_service/out/2026-04-16/2026-04-16T14-22-03_f998585a00f74065a91aa50761bb933f.json`
+   - callback mock 记录：
+     - `/Users/zhuxiaowei/apps/rpa-mobile/examples/mobile-rpa-cases/cases/common_mock_callback_service/out/2026-04-16/2026-04-16T14-22-04_4a311e5a6b2b4255869751b773c20a49.json`
+5. mock callback 结果体已确认：
+   - 顶层 `status=2`
+   - 顶层 `failReason=31`
+   - 顶层 `failMsg=脚本执行异常: 'NoneType' object has no attribute 'click'`
+
+## 当前代码与验证状态
+
+1. 当前仓内已经做过一轮针对旧崩点的修复与保护，且这轮真机回放验证了旧 `NoneType.child` 分支已被绕开。
+2. 当前仍未解决的残差，重新收口为公众号主页账号信息入口 `amx` 的布局兼容不足。
+3. 这意味着当前样本不是“旧 bug 完整复发”，而是“同一条公众号老主线里的另一处未兜底分支被继续暴露出来”。
+
+## 下一步
+
+1. 优先把 `get_user1()` 从“硬点 `amx`”改成“可空判断 + 当前主页布局兼容 + 必要时降级返回”的安全入口。
+2. 为 `get_user1()` 新增针对“主页内容已加载但 `amx` 缺失”的本地回归测试，避免后续再回归成 `NoneType.click`。
+3. 继续用同一份 mock payload 在 `s2(WKDAUGWGEA75KRCM)` 上复跑，确认：
+   - 旧 `NoneType.child` 不复发；
+   - 新 `NoneType.click` 被消除；
+   - `actType=41` 至少能进入 `accountData/articleData/commentData` 产出链路。
+
+## 修复后再次真机回放验证（2026-04-22 12:59 +0800）
+
+1. 按云端原始 `workId=91fe14d5565b871ceb6792012cc7e508` payload 再次在 `s2(WKDAUGWGEA75KRCM)` 发起真机回放，业务参数保持原样，只把：
+   - `deviceSerialNumber` 改为 `WKDAUGWGEA75KRCM`
+   - `callbackUrl` 改为本地 mock `http://127.0.0.1:18888/callback/gongzhonghao-41-91fe-replay-v2`
+2. 本次回放任务与录屏：
+   - `job_id=mcppkg_20260422_125651_045314_161bf908`
+   - `screenrec_session=screenrec_20260422_125651_274014_b5625185`
+   - 录屏文件：`/Users/zhuxiaowei/apps/rpa-mobile/rpa-dev-platform/daemon/recordings/screenrecord_WKDAUGWGEA75KRCM_91fe-replay-current-code-v2_20260422_125651_b5625185.mp4`
+3. 当前代码下，业务问题仍然复现，但表现已稳定收口为：
+   - `2026-04-22 12:58:25 +0800`
+   - `[PLAN_EXCEPTION] AttributeError: 'NoneType' object has no attribute 'text'`
+   - 栈点落在 `gongzhonghao/main.py:get_link_in_platform(...)`
+   - 具体旧硬编码链：`publish_data = listview.child(0).child(0).child(0).child(0).child(0).text()`
+4. 这次回放说明：
+   - 历史原始主因 `NoneType.child` 确实已不再出现；
+   - 但 `get_link_in_platform(...)` 仍残留另一条硬编码层级读取分支，当前真实阻塞点已变成 `NoneType.text`；
+   - 因此 `91fe` 不能再按“已解决”收口，当前更准确状态是“旧主因已绕开，但同函数 sibling 分支仍未修完”。
+5. 同一轮也验证了前面补的基础设施修复已生效：
+   - 长录屏这次 `adb_returncode=0`，`ffprobe` 可正常读取，时长约 `98.04s`，说明录屏文件已可直接打开；
+   - snapshot mock 已正常落盘为真实 PNG 侧车文件，不再只有 base64 JSON。
+6. 本次新增证据文件：
+   - snapshot mock 记录：
+     - `/Users/zhuxiaowei/apps/rpa-mobile/examples/mobile-rpa-cases/cases/common_mock_callback_service/out/2026-04-22/2026-04-22T12-58-26_ad2255066a1b48e6bbec6ab9e21b5c87.json`
+   - snapshot PNG：
+     - `/Users/zhuxiaowei/apps/rpa-mobile/examples/mobile-rpa-cases/cases/common_mock_callback_service/out/2026-04-22/2026-04-22T12-58-26_ad2255066a1b48e6bbec6ab9e21b5c87_body.png`
+   - callback mock 记录：
+     - `/Users/zhuxiaowei/apps/rpa-mobile/examples/mobile-rpa-cases/cases/common_mock_callback_service/out/2026-04-22/2026-04-22T12-58-28_ad04bb473ca24b7f9add182ef9b190d1.json`
+   - 可读录屏：
+     - `/Users/zhuxiaowei/apps/rpa-mobile/rpa-dev-platform/daemon/recordings/screenrecord_WKDAUGWGEA75KRCM_91fe-replay-current-code-v2_20260422_125651_b5625185.mp4`

@@ -24,7 +24,7 @@ ANCHOR_DOC_NAME = "ccos-unified-protocol.md"
 TASK_INDEX_REL = "capture/tasklines/task-index.md"
 TASKLINES_REL = "capture/tasklines"
 TASK_REQUIRED_FIELDS = ("project_id", "repo_root", "ccos_node")
-COMMIT_META_TEMPLATE = """taskline_id: <project/node/taskline>
+COMMIT_META_TEMPLATE = """taskline_id: <project_id/ccos_node/task_slug>
 work_summary: <本次工作摘要>
 next: <下一步动作>
 hours: <1.5h>"""
@@ -227,9 +227,43 @@ if ! grep -Eiq '^[[:space:]]*(hours|工时)[[:space:]]*[:：][[:space:]]*.+$' "$
   append_missing "hours"
 fi
 
+invalid=""
+append_invalid() {{
+  if [ -z "$invalid" ]; then
+    invalid="$1"
+  else
+    invalid="$invalid, $1"
+  fi
+}}
+
+if grep -Eiq '^[[:space:]]*taskline_id[[:space:]]*[:：][[:space:]]*.+$' "$MSG_FILE"; then
+  if ! grep -Eiq '^[[:space:]]*taskline_id[[:space:]]*[:：][[:space:]]*[^[:space:]/]+/[^[:space:]/]+/[^[:space:]/]+[[:space:]]*$' "$MSG_FILE"; then
+    append_invalid "taskline_id(format: project_id/ccos_node/task_slug)"
+  fi
+fi
+
+if grep -Eiq '^[[:space:]]*(hours|工时)[[:space:]]*[:：][[:space:]]*.+$' "$MSG_FILE"; then
+  if ! grep -Eiq '^[[:space:]]*(hours|工时)[[:space:]]*[:：][[:space:]]*[0-9]+([.][0-9]+)?([[:space:]]*(h|小时))?[[:space:]]*$' "$MSG_FILE"; then
+    append_invalid "hours(format: 1.5h or 1.5)"
+  fi
+fi
+
 if [ -n "$missing" ]; then
   echo "[ccos] commit meta missing: $missing" >&2
   echo "[ccos] required fields: taskline_id / next / hours" >&2
+  echo "[ccos] template:" >&2
+  cat >&2 <<'CCOS_TEMPLATE'
+{escaped_template}
+CCOS_TEMPLATE
+  if [ "$MODE" = "strict" ]; then
+    exit 1
+  fi
+fi
+
+if [ -n "$invalid" ]; then
+  echo "[ccos] commit meta invalid: $invalid" >&2
+  echo "[ccos] taskline_id should use project_id/ccos_node/task_slug" >&2
+  echo "[ccos] hours accepts 1.5h or 1.5" >&2
   echo "[ccos] template:" >&2
   cat >&2 <<'CCOS_TEMPLATE'
 {escaped_template}
@@ -952,6 +986,8 @@ def cmd_hub_report_daily(args: argparse.Namespace) -> int:
         cmd.extend(["--registry", args.registry])
     if args.journal_root:
         cmd.extend(["--journal-root", args.journal_root])
+    if args.prefer:
+        cmd.extend(["--prefer", args.prefer])
     if args.print_only:
         cmd.append("--print-only")
     if args.print_commit_template:
@@ -1260,6 +1296,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--journal-root",
         default="capture/journals",
         help="Journal path relative to hub root",
+    )
+    hub_report.add_argument(
+        "--prefer",
+        choices=["commit-only", "commit-first"],
+        default="commit-only",
+        help="Federated report source priority (default: commit-only)",
     )
     hub_report.add_argument("--print-only", action="store_true", help="Print only")
     hub_report.add_argument(

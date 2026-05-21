@@ -4,8 +4,8 @@
 - project_id: `rpa-mobile`
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
-- status: `in_progress`
-- updated_at: `2026-03-24 18:08 +0800`
+- status: `done`
+- updated_at: `2026-04-16 18:56 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -34,16 +34,24 @@
 15. `14-20` 子文档已按残差结构各补 1 条 `爱吃波客` 定向 case：`41/21/3x/1x` 直接回填 `2026-03-12` mock 元数据与通过记录，`51/4.1/4.4` 也已冻结待补跑样例，原 `小鹏汽车` 样例保持不删。
 16. `xp-wx1-simplified` 已新增微信登录页统一守卫：导航阶段命中 `LoginVoiceUI` 直接返回“账号已掉线”；最终失败且非手动停止时，若结束前仍停在微信登录页，则统一覆盖顶层与 `actResultList` 的失败归因为账号掉线。
 17. 项目内 `wechat_navigator.py` 与 `rpa-dev-platform` 的 `wechat_navigator_sdk.py` 已同步登录页前置守卫，平台导出的导航器快照也已保持一致。
+18. `wx项目 (2)` 第二章已完成一轮“原始 `.docx` -> Markdown/Mermaid 可维护基线”的同步：当前权威稿为 `CCOS/knowledge/business-logic/xpeng-project/wx项目-第二章Mermaid与Markdown同步-v1.md`，并新增四张 `xpeng-wx-chapter2-*.md` Mermaid 流程图资产，专门承接“需求内容”章节与真实实现之间的差异收口。
+19. 本轮文档同步明确了当前真实实现的对客事实：开放平台业务参数统一走 `input_params.task_payload` 且只接受单个 `RpaTask`；`platform=10/11` 对应视频号/公众号；同一 `RpaTask` 不混用 `1x/2x/3x/4x/5x` 任务族；对客结果以 `resultList[0].actResultList[]` 为准；手动停止归一到 `failReason=99`。
+20. 第二章历史方案里涉及“子评论定位/点赞/盖楼/不喜欢/投诉”的口径，已在本轮同步中统一降级为历史对照：当前视频号与公众号交互任务都只支持主评论层操作，不支持子评论链路。
+21. 原始 `.docx` 阅读件仍保留在项目目录供业务同学查看，但当前仓库治理已改成“Git 只追踪 Markdown/Mermaid 源稿，`.docx` 本地忽略”，避免后续再把二进制附件当成唯一事实源并污染代码提交。
 
 ## 下一步
+
+> 2026-04-16 路由收口：本任务线已归档。后续 simplified 真实任务回归与残余稳定性问题并入 `rpa-mobile/outer/xpeng-stable-baseline`，不再把本任务线作为活跃开发线。
 
 1. Backbone：继续基于当前正式代码回归真实 `21/31/32/41/51` 任务，重点看真实业务数据、评论阶段信号与页面态漂移。
 2. Backbone：后续凡涉及小鹏接口调用，统一保持“按请求实时签名 + 高重试 + HTTP trace”口径，不再引入共享鉴权缓存。
 3. Delta：待正式版链路继续稳定后，再决定是否把 shared contract / snapshot 稳定性能力有选择地迁到 `simplified`。
 4. Delta：后续若继续补跑文档矩阵，优先复用已冻结的 `爱吃波客 / sphkEaNwwJj1TZH` 基线，先完成 `51 / 4.1 / 4.4` 三条新增用例的执行记录收口。
 5. Delta：当前微信登录页识别仍只覆盖 `LoginVoiceUI`，后续若微信版本扩展登录 Activity，再按真实日志补充识别表。
+6. Delta：后续若继续改 `wx项目 (2)` 第二章，优先修改 Markdown 同步稿与 Mermaid 源文件，再按需生成本地 `.docx` 阅读版，不再反向把 `.docx` 当成唯一真值来源。
 
 ## Progress Log
+- 2026-04-08 21:59 +0800 已同步 `wx项目 (2)` 第二章文档任务线：新增结构化同步稿 `wx项目-第二章Mermaid与Markdown同步-v1.md` 与四张 `xpeng-wx-chapter2-*.md` Mermaid 资产，明确 `input_params.task_payload`/`platform=10,11`/任务族不混用/`resultList[0].actResultList[]`/手动停止 `failReason=99` 等当前口径，并冻结“视频号、公众号交互当前仅支持主评论层操作，不支持子评论链路”的事实；原 `.docx` 阅读件改为本地忽略，不纳入代码提交
 - 2026-03-24 18:08 +0800 已同步微信登录页守卫：`xp-wx1-simplified` 新增统一 helper，导航阶段命中 `LoginVoiceUI` 直接返回“账号已掉线”；最终失败且非手动停止时会在回传前统一覆盖顶层与 act 级失败归因为账号掉线；项目导航器与 `rpa-dev-platform` SDK 已同步同一口径
 - 2026-03-12 16:27 +0800 已同步 dispatch-integration `14-20` 子文档残差增量：每个子文档都新增 1 条 `爱吃波客` 定向 case，并把 `41/21/3x/1x` 的 mock 元数据与通过记录回写到矩阵文档；`51/4.1/4.4` 待后续补跑
 - 2026-03-11 19:20 +0800 已同步 shared DTO contract、按请求实时签名、成功态省略 `failReason`、完整 OSS 快照 URL 与截图稳定性修复；`s2` 真机探针 `http_pkg_20260311_190143_080525_f77ec1e4` 已确认 `STS -> OSS PUT -> callback` 三段全部 200

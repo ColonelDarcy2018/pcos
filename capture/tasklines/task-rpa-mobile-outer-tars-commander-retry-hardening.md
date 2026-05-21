@@ -4,8 +4,8 @@
 - project_id: `rpa-mobile`
 - repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
 - ccos_node: `outer`
-- status: `active`
-- updated_at: `2026-04-13 19:38 +0800`
+- status: `done`
+- updated_at: `2026-04-16 18:56 +0800`
 - updated_by: `codex(agent-codex-main)`
 
 ## 背景
@@ -64,6 +64,8 @@
 3. 不直接承担“当前设备现在还是这个版本态”的判断职责。
 
 ## 下一步
+
+> 2026-04-16 路由收口：基础重试、恢复、durable replay 与状态观测已完成，本任务线标记为 `done`。若再出现弱网 ACK 或结果稳态问题，转入 `rpa-mobile/outer/tars-weak-network-result-delivery-phase1`。
 
 1. 继续补齐“脚本执行上下文级”的恢复能力；当前已能恢复 commander 会话与安全收尾，但还不能让运行中的 Python 任务真正断点续跑。
 2. 在 `CONTROL / DOWNLOAD` 客户端拆分的基础上，继续把重试退避和 jitter 做 profile 级细分，避免两类流量仍沿用同一套线性 backoff。

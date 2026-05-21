@@ -1,0 +1,39 @@
+# 塔斯 App 剪切板运行时与 IME 兼容治理 Phase 1
+
+- taskline_id: `rpa-mobile/outer/tars-clipboard-runtime-phase1`
+- project_id: `rpa-mobile`
+- repo_root: `/Users/zhuxiaowei/apps/rpa-mobile`
+- ccos_node: `outer`
+- status: `planned`
+- updated_at: `2026-04-16 18:56 +0800`
+- updated_by: `codex(agent-codex-main)`
+
+## 背景
+
+项目内原始任务文档：
+`/Users/zhuxiaowei/apps/rpa-mobile/CCOS/context/task-tars-clipboard-runtime-phase1.md`。
+
+该任务线用于沉淀塔斯 App 剪切板读取失败、runtime fake IME 兼容与文档歧义的专项上下文，避免继续把 `workUuid=07a98f11b661c6dfa02d28954e3d7d1c` 这类问题混写在 `xpeng-stable-baseline` 业务任务线里。
+
+## 当前同步结论（摘要）
+
+1. 当前已确认：`workUuid=07a98f11b661c6dfa02d28954e3d7d1c` 的直接故障点不是业务逻辑本身，而是 `ScriptRuntime.getClip(...)` 在真正读取剪切板前，先尝试把默认输入法切到 `APPLICATION_ID + "/.ime.BotIMEService"`。
+2. 当前仓库必须明确区分两条能力路径：
+   - runtime path：`zbot.getClip()/setClip()`，其中只有 `getClip()` 会切 fake IME
+   - component/API path：`Mobile.GetClipboardText()/SetClipboardText()` 与 component clipboard，当前直接走 `ClipboardManager`
+3. 当前高级指令文档虽然写到“读取剪切板需要特殊权限”，但没有区分上面这两条路径，因此容易把 runtime 的 legacy 兼容逻辑误推广成所有剪切板能力的统一事实。
+4. Android 子仓历史能证明 fake IME 思路是长期遗留，不是近期回归；但当前代码和历史都没有发现真实的 `BotIMEService` 实现，因此这条兼容策略在现仓内属于不完整遗留。
+5. 当前业务边界已冻结：公众号正式兼容层的“已知 sign”任务已经在 executor 层绕开 `zbot.getClip()`；但这不等于 Android runtime 层的共性问题已根治，也不等于 `21/41` 老采集主线可以直接去剪切板。
+
+## 下一步
+
+> 2026-04-16 路由收口：当前只冻结剪切板 runtime/IME 根因与双路径差异，未进入实现，保持 `planned`。恢复时优先处理 `ScriptRuntime.getClip()` 能力前置校验或 IME service 补齐。
+
+1. 若后续继续实现，优先决定 `ScriptRuntime.getClip()` 是走“能力前置校验 + graceful degrade”，还是走“真正补齐 IME service”。
+2. 对外文档后续必须明确区分 runtime path 与 component/API path，避免继续让“读取剪切板权限要求”掩盖真实调用路径差异。
+3. 类似样本后续排障的第一步应先确认调用方属于 `getClip()`、`setClip()` 还是 `Mobile/ClipboardHandler`，不要再把三类证据混看。
+4. 业务层若继续绕开 runtime getClip，应明确标注这是“业务边界规避”，不是 runtime 根治结论。
+
+## Progress Log
+
+- 2026-04-16 16:16 +0800 已新建剪切板运行时专项任务线，并同步项目 `CCOS/context` 与 Hub 路由。当前已冻结 `07a98...` 云端样本根因、runtime/component 双路径差异、`BotIMEService` 历史包袱与业务边界，后续同类问题默认先回到本 taskline 继续。

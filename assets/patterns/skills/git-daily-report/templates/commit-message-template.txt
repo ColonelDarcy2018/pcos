@@ -1,6 +1,6 @@
 <type>(<scope>): <subject>
 
-taskline_id: <project/taskline>
+taskline_id: <project_id/ccos_node/task_slug>
 work_summary: <本次工作摘要>
 next: <下一步动作>
 hours: <1.5h>
